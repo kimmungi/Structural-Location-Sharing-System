@@ -404,7 +404,11 @@
     <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=0cf2a2f5a547fdb9fa41f6c2832644a8"></script>
     <script>
         // 소켓 연결
-        const socket = io('https://structural-location-sharing-system.onrender.com');
+        const socket = io('https://structural-location-sharing-system.onrender.com', {
+            transports: ['websocket', 'polling'],
+            reconnection: true,
+            reconnectionAttempts: 5
+        });
         
         // 카카오맵 초기화 및 현재 위치 추적
         let map;
@@ -512,11 +516,18 @@
                 document.getElementById('videoContainer').style.display = 'block';
 
                 // PeerJS 초기화
-                peer = new Peer({
+                peer = new Peer(undefined, {
                     host: 'structural-location-sharing-system.onrender.com',
                     port: 443,
                     path: '/peerjs',
-                    secure: true
+                    secure: true,
+                    debug: 3,
+                    config: {
+                        'iceServers': [
+                            { url: 'stun:stun.l.google.com:19302' },
+                            { url: 'turn:numb.viagenie.ca', credential: 'muazkh', username: 'webrtc@live.com' }
+                        ]
+                    }
                 });
                 
                 peer.on('open', (id) => {
