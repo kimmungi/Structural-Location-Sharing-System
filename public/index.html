@@ -543,7 +543,6 @@
         });
 
         // 영상통화 관련 변수
-        let peer;
         let currentCall;
 
         // 영상통화 시작
@@ -553,29 +552,10 @@
                 document.getElementById('localVideo').srcObject = stream;
                 document.getElementById('videoContainer').style.display = 'block';
 
-                // PeerJS 초기화
-                peer = new Peer(undefined, {
-                    host: 'structural-location-sharing-system.onrender.com',
-                    port: 443,
-                    path: '/peerjs',
-                    secure: true,
-                    debug: 3,
-                    config: {
-                        'iceServers': [
-                            { url: 'stun:stun.l.google.com:19302' },
-                            { url: 'turn:numb.viagenie.ca', credential: 'muazkh', username: 'webrtc@live.com' }
-                        ]
-                    }
-                });
-                
-                peer.on('open', (id) => {
-                    socket.emit('joinRescueRoom', id);
-                });
-
                 // 상대방의 호출을 받았을 때
                 peer.on('call', (call) => {
                     currentCall = call;
-                    call.answer(stream); // 내 스트림을 상대방에게 전송
+                    call.answer(stream);
                     call.on('stream', (remoteStream) => {
                         document.getElementById('remoteVideo').srcObject = remoteStream;
                     });
@@ -583,7 +563,7 @@
 
                 // 새로운 구조대원이 참여했을 때
                 socket.on('newRescuer', (peerId) => {
-                    const call = peer.call(peerId, stream); // 내 스트림을 새로운 참여자에게 전송
+                    const call = peer.call(peerId, stream);
                     currentCall = call;
                     call.on('stream', (remoteStream) => {
                         document.getElementById('remoteVideo').srcObject = remoteStream;
