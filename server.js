@@ -2,16 +2,23 @@ const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const { ExpressPeerServer } = require("peer");
+const cors = require("cors");
 
 const app = express();
 const server = http.createServer(app);
+
+// CORS 설정
+app.use(cors());
 
 // Socket.IO 설정
 const io = new Server(server, {
   cors: {
     origin: "*",
     methods: ["GET", "POST"],
+    allowedHeaders: ["*"],
+    credentials: true,
   },
+  pingTimeout: 60000,
   transports: ["websocket", "polling"],
 });
 
