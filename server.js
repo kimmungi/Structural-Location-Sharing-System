@@ -2,7 +2,6 @@ const express = require("express");
 const http = require("http");
 const socketIo = require("socket.io");
 const { ExpressPeerServer } = require("peer");
-const Peer = require("peerjs");
 
 const app = express();
 const server = http.createServer(app);
@@ -26,28 +25,26 @@ const peerServer = ExpressPeerServer(server, {
 app.use("/peerjs", peerServer);
 app.use(express.static("public"));
 
-peer = new Peer({
-  host: "여기에-render-도메인-입력",
-  port: 443, // HTTPS 포트
-  path: "/peerjs",
-  secure: true, // HTTPS 사용
-});
-
+// 소켓 연결 처리
 io.on("connection", (socket) => {
+  // 위치 업데이트 처리
   socket.on("locationUpdate", (location) => {
     socket.broadcast.emit("rescuerLocation", location);
   });
 
+  // 채팅 메시지 처리
   socket.on("chatMessage", (message) => {
     io.emit("chatMessage", message);
   });
 
+  // 영상통화를 위한 룸 처리
   socket.on("joinRescueRoom", (peerId) => {
     socket.join("rescueRoom");
     socket.to("rescueRoom").emit("newRescuer", peerId);
   });
 });
 
+// 서버 시작
 server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
