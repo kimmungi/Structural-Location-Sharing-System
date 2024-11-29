@@ -8,21 +8,32 @@ const app = express();
 const server = http.createServer(app);
 
 // CORS 설정
-app.use(cors());
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST"],
+    credentials: true,
+  })
+);
 
 // Socket.IO 설정
 const io = new Server(server, {
   cors: {
     origin: "*",
     methods: ["GET", "POST"],
+    credentials: true,
   },
-  transports: ["polling", "websocket"],
+  allowEIO3: true,
+  transports: ["websocket", "polling"],
 });
 
 // PeerJS 서버 설정
 const peerServer = ExpressPeerServer(server, {
   debug: true,
-  path: "/",
+  path: "/peerjs",
+  allow_discovery: true,
+  proxied: true,
+  ssl: {},
 });
 
 app.use("/peerjs", peerServer);
@@ -35,9 +46,13 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     console.log("사용자 연결 해제");
   });
+
+  socket.on("locationUpdate", (location) => {
+    socket.broadcast.emit("rescuerLocation", location);
+  });
 });
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
