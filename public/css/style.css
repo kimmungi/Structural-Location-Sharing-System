@@ -1,0 +1,55 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 20px;
+}
+
+.button {
+  display: inline-block;
+  padding: 10px 20px;
+  margin: 10px;
+  background-color: #007bff;
+  color: white;
+  text-decoration: none;
+  border-radius: 5px;
+}
+
+#videoContainer {
+  display: flex;
+  gap: 20px;
+}
+
+video {
+  width: 400px;
+  height: 300px;
+  border: 1px solid #ccc;
+}
+
+.back-button {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+}
+
+#chatContainer {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+#messages {
+  height: 400px;
+  overflow-y: auto;
+  border: 1px solid #ccc;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+#messageForm {
+  display: flex;
+  gap: 10px;
+}
+
+#messageInput {
+  flex: 1;
+  padding: 5px;
+}
