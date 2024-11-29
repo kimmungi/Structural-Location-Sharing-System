@@ -32,21 +32,46 @@ const peerServer = ExpressPeerServer(server, {
 app.use("/peerjs", peerServer);
 app.use(express.static("public"));
 
+// 라우트 설정 추가
+app.get("/", (req, res) => {
+  res.sendFile(__dirname + "/public/index.html");
+});
+
+app.get("/chat", (req, res) => {
+  res.sendFile(__dirname + "/public/chat.html");
+});
+
+app.get("/video", (req, res) => {
+  res.sendFile(__dirname + "/public/video.html");
+});
+
+app.get("/location", (req, res) => {
+  res.sendFile(__dirname + "/public/location.html");
+});
+
 // 소켓 연결 처리
 io.on("connection", (socket) => {
   console.log("사용자 연결됨");
 
-  socket.on("locationUpdate", (location) => {
-    socket.broadcast.emit("rescuerLocation", location);
-  });
-
+  // 채팅 메시지 처리
   socket.on("chatMessage", (message) => {
     io.emit("chatMessage", message);
   });
 
+  // 위치 업데이트 처리
+  socket.on("locationUpdate", (location) => {
+    socket.broadcast.emit("rescuerLocation", location);
+  });
+
+  // 화상 통화 룸 처리
   socket.on("joinRescueRoom", (peerId) => {
     socket.join("rescueRoom");
     socket.to("rescueRoom").emit("newRescuer", peerId);
+  });
+
+  // 연결 해제 처리
+  socket.on("disconnect", () => {
+    console.log("사용자 연결 해제");
   });
 });
 
