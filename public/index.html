@@ -422,32 +422,50 @@
             secure: true,
             debug: 3,
             config: {
+                iceTransportPolicy: 'relay',
+                iceCandidatePoolSize: 10,
                 iceServers: [
-                    { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' },
+                    { urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] },
                     {
-                        urls: 'turn:numb.viagenie.ca',
+                        urls: [
+                            'turn:eu-0.turn.peerjs.com:3478',
+                            'turn:us-0.turn.peerjs.com:3478',
+                        ],
+                        username: 'peerjs',
+                        credential: 'peerjsp'
+                    },
+                    {
+                        urls: [
+                            'turn:numb.viagenie.ca:3478'
+                        ],
                         username: 'webrtc@live.com',
                         credential: 'muazkh'
                     },
                     {
-                        urls: 'turn:openrelay.metered.ca:80',
-                        username: 'openrelayproject',
-                        credential: 'openrelayproject'
-                    },
-                    {
-                        urls: 'turn:openrelay.metered.ca:443',
-                        username: 'openrelayproject',
-                        credential: 'openrelayproject'
+                        urls: [
+                            'turn:relay.metered.ca:80',
+                            'turn:relay.metered.ca:443',
+                            'turn:relay.metered.ca:443?transport=tcp'
+                        ],
+                        username: 'e23d6e2a5f48431a5bce4ea6',
+                        credential: 'xzwXvIV9bqDKGgdv'
                     }
-                ],
-                sdpSemantics: 'unified-plan'
+                ]
             }
         });
 
-        // 디버깅을 위한 이벤트 리스너 추가
+        // 디버깅을 위한 이벤트 리스너
         peer.on('error', (err) => {
             console.error('PeerJS error:', err);
+        });
+
+        peer.on('disconnected', () => {
+            console.log('PeerJS disconnected. Attempting to reconnect...');
+            peer.reconnect();
+        });
+
+        peer.on('close', () => {
+            console.log('PeerJS connection closed');
         });
 
         // 연결 이벤트 핸들러 추가
@@ -550,7 +568,7 @@
             chatMessages.scrollTop = chatMessages.scrollHeight;
         });
 
-        // 페이지 로드 시 지도 초기화
+        // 페이지 로드 시 지��� 초기화
         window.onload = initMap;
 
         // 엔터키로 메시지 전송
@@ -610,8 +628,17 @@
                         call.on('stream', (remoteStream) => {
                             console.log('Received remote stream from outgoing call');
                             const remoteVideo = document.getElementById('remoteVideo');
-                            remoteVideo.srcObject = remoteStream;
-                            remoteVideo.play().catch(e => console.error('Remote video play error:', e));
+                            if (remoteVideo.srcObject !== remoteStream) {
+                                remoteVideo.srcObject = remoteStream;
+                                console.log('Set remote stream to video element');
+                                remoteVideo.play().catch(e => console.error('Remote video play error:', e));
+                            }
+                        });
+
+                        call.on('close', () => {
+                            console.log('Call closed');
+                            const remoteVideo = document.getElementById('remoteVideo');
+                            remoteVideo.srcObject = null;
                         });
 
                         call.on('error', (error) => {
@@ -624,7 +651,7 @@
 
             } catch (err) {
                 console.error('Video call error:', err);
-                alert('카메라나 마이크를 사용할 수 없습니다.');
+                alert('카메라나 마크를 사용할 수 없습니다.');
             }
         }
 
