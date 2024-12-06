@@ -557,31 +557,36 @@
                 
                 const localVideo = document.getElementById('localVideo');
                 localVideo.srcObject = stream;
-                localVideo.muted = true; // 자기 목소리가 피드백 되는 것을 방지
+                localVideo.muted = true;
 
                 document.getElementById('videoContainer').style.display = 'block';
 
                 // 다른 사용자에게 통화 요청
                 socket.emit('requestCall', ROOM_ID);
 
-                // 상대방의 호출을 받았을 때
+                // 이벤트 리스너를 한 번만 등록
+                peer.off('call');
                 peer.on('call', (call) => {
+                    console.log('Receiving call...');
                     currentCall = call;
                     call.answer(stream);
                     
                     call.on('stream', (remoteStream) => {
+                        console.log('Received remote stream');
                         const remoteVideo = document.getElementById('remoteVideo');
                         remoteVideo.srcObject = remoteStream;
                     });
                 });
 
-                // 새로운 사용자가 참여했을 때
+                // 새로운 사용자 참여 이벤트 리스너를 한 번만 등록
+                socket.off('userJoined');
                 socket.on('userJoined', (userId) => {
                     console.log('New user joined:', userId);
                     const call = peer.call(userId, stream);
                     currentCall = call;
                     
                     call.on('stream', (remoteStream) => {
+                        console.log('Received remote stream from new user');
                         const remoteVideo = document.getElementById('remoteVideo');
                         remoteVideo.srcObject = remoteStream;
                     });
