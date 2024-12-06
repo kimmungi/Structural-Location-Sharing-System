@@ -425,21 +425,29 @@
                 iceServers: [
                     { urls: 'stun:stun.l.google.com:19302' },
                     { urls: 'stun:stun1.l.google.com:19302' },
-                    { urls: 'stun:stun2.l.google.com:19302' },
-                    { urls: 'stun:stun3.l.google.com:19302' },
-                    { urls: 'stun:stun4.l.google.com:19302' },
                     {
                         urls: 'turn:numb.viagenie.ca',
                         username: 'webrtc@live.com',
                         credential: 'muazkh'
                     },
                     {
-                        urls: 'turn:turn.anyfirewall.com:443?transport=tcp',
-                        username: 'webrtc',
-                        credential: 'webrtc'
+                        urls: 'turn:openrelay.metered.ca:80',
+                        username: 'openrelayproject',
+                        credential: 'openrelayproject'
+                    },
+                    {
+                        urls: 'turn:openrelay.metered.ca:443',
+                        username: 'openrelayproject',
+                        credential: 'openrelayproject'
                     }
-                ]
+                ],
+                sdpSemantics: 'unified-plan'
             }
+        });
+
+        // 디버깅을 위한 이벤트 리스너 추가
+        peer.on('error', (err) => {
+            console.error('PeerJS error:', err);
         });
 
         // 연결 이벤트 핸들러 추가
@@ -571,45 +579,47 @@
 
                 document.getElementById('videoContainer').style.display = 'block';
 
-                socket.emit('requestCall', ROOM_ID);
-                console.log('Emitted requestCall');
-
-                peer.on('call', (call) => {
-                    console.log('Received call from peer');
+                // 기존 이벤트 리스너 제거
+                peer.removeAllListeners('call');
+                
+                // 새로운 이벤트 리스너 등록
+                peer.on('call', async (call) => {
+                    console.log('Received incoming call');
                     currentCall = call;
                     call.answer(stream);
                     
                     call.on('stream', (remoteStream) => {
-                        console.log('Got remote stream');
+                        console.log('Received remote stream in incoming call');
                         const remoteVideo = document.getElementById('remoteVideo');
-                        if (remoteVideo.srcObject !== remoteStream) {
-                            remoteVideo.srcObject = remoteStream;
-                            console.log('Set remote stream to video element');
-                        }
-                    });
-
-                    call.on('error', (err) => {
-                        console.error('Call error:', err);
+                        remoteVideo.srcObject = remoteStream;
+                        remoteVideo.play().catch(e => console.error('Remote video play error:', e));
                     });
                 });
 
-                socket.on('userJoined', (userId) => {
-                    console.log('User joined:', userId);
-                    const call = peer.call(userId, stream);
-                    currentCall = call;
-                    
-                    call.on('stream', (remoteStream) => {
-                        console.log('Got remote stream from joined user');
-                        const remoteVideo = document.getElementById('remoteVideo');
-                        if (remoteVideo.srcObject !== remoteStream) {
-                            remoteVideo.srcObject = remoteStream;
-                            console.log('Set remote stream to video element');
-                        }
-                    });
+                // 다른 사용자에게 통화 요청
+                socket.emit('requestCall', ROOM_ID);
+                console.log('Emitted requestCall');
 
-                    call.on('error', (err) => {
-                        console.error('Call error:', err);
-                    });
+                // userJoined 이벤트 리스너
+                socket.on('userJoined', async (userId) => {
+                    console.log('Making call to:', userId);
+                    try {
+                        const call = peer.call(userId, stream);
+                        currentCall = call;
+                        
+                        call.on('stream', (remoteStream) => {
+                            console.log('Received remote stream from outgoing call');
+                            const remoteVideo = document.getElementById('remoteVideo');
+                            remoteVideo.srcObject = remoteStream;
+                            remoteVideo.play().catch(e => console.error('Remote video play error:', e));
+                        });
+
+                        call.on('error', (error) => {
+                            console.error('Call error:', error);
+                        });
+                    } catch (error) {
+                        console.error('Error making call:', error);
+                    }
                 });
 
             } catch (err) {
