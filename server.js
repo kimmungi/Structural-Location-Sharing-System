@@ -36,6 +36,15 @@ app.use(express.static("public"));
 io.on("connection", (socket) => {
   console.log("사용자 연결됨");
 
+  socket.on("join-room", (roomId, userId) => {
+    socket.join(roomId);
+    socket.to(roomId).emit("userJoined", userId);
+  });
+
+  socket.on("requestCall", (roomId) => {
+    socket.to(roomId).emit("callRequested");
+  });
+
   socket.on("locationUpdate", (location) => {
     socket.broadcast.emit("rescuerLocation", location);
   });
@@ -44,9 +53,8 @@ io.on("connection", (socket) => {
     io.emit("chatMessage", message);
   });
 
-  socket.on("joinRescueRoom", (peerId) => {
-    socket.join("rescueRoom");
-    socket.to("rescueRoom").emit("newRescuer", peerId);
+  socket.on("disconnect", () => {
+    console.log("사용자 연결 해제");
   });
 });
 

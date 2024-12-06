@@ -443,6 +443,8 @@
             console.log('Socket connection error:', error);
         });
 
+        const ROOM_ID = 'default-room'; // 기본 방 ID 설정
+
         peer.on('open', (id) => {
             console.log('My peer ID is:', id);
             socket.emit('join-room', ROOM_ID, id);
@@ -455,7 +457,7 @@
         function initMap() {
             const mapContainer = document.getElementById('map');
             const mapOption = {
-                center: new kakao.maps.LatLng(37.566826, 126.978656), // 서울시청 좌표로 초기화
+                center: new kakao.maps.LatLng(37.566826, 126.978656), // 서울시청 좌로 초기화
                 level: 3
             };
             
@@ -548,25 +550,40 @@
         // 영상통화 시작
         async function startVideoCall() {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                document.getElementById('localVideo').srcObject = stream;
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: true, 
+                    audio: true 
+                });
+                
+                const localVideo = document.getElementById('localVideo');
+                localVideo.srcObject = stream;
+                localVideo.muted = true; // 자기 목소리가 피드백 되는 것을 방지
+
                 document.getElementById('videoContainer').style.display = 'block';
+
+                // 다른 사용자에게 통화 요청
+                socket.emit('requestCall', ROOM_ID);
 
                 // 상대방의 호출을 받았을 때
                 peer.on('call', (call) => {
                     currentCall = call;
                     call.answer(stream);
+                    
                     call.on('stream', (remoteStream) => {
-                        document.getElementById('remoteVideo').srcObject = remoteStream;
+                        const remoteVideo = document.getElementById('remoteVideo');
+                        remoteVideo.srcObject = remoteStream;
                     });
                 });
 
-                // 새로운 구조대원이 참여했을 때
-                socket.on('newRescuer', (peerId) => {
-                    const call = peer.call(peerId, stream);
+                // 새로운 사용자가 참여했을 때
+                socket.on('userJoined', (userId) => {
+                    console.log('New user joined:', userId);
+                    const call = peer.call(userId, stream);
                     currentCall = call;
+                    
                     call.on('stream', (remoteStream) => {
-                        document.getElementById('remoteVideo').srcObject = remoteStream;
+                        const remoteVideo = document.getElementById('remoteVideo');
+                        remoteVideo.srcObject = remoteStream;
                     });
                 });
 
