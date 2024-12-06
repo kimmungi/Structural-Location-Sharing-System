@@ -425,10 +425,18 @@
                 iceServers: [
                     { urls: 'stun:stun.l.google.com:19302' },
                     { urls: 'stun:stun1.l.google.com:19302' },
+                    { urls: 'stun:stun2.l.google.com:19302' },
+                    { urls: 'stun:stun3.l.google.com:19302' },
+                    { urls: 'stun:stun4.l.google.com:19302' },
                     {
                         urls: 'turn:numb.viagenie.ca',
                         username: 'webrtc@live.com',
                         credential: 'muazkh'
+                    },
+                    {
+                        urls: 'turn:turn.anyfirewall.com:443?transport=tcp',
+                        username: 'webrtc',
+                        credential: 'webrtc'
                     }
                 ]
             }
@@ -550,10 +558,12 @@
         // 영상통화 시작
         async function startVideoCall() {
             try {
+                console.log('Starting video call...');
                 const stream = await navigator.mediaDevices.getUserMedia({ 
                     video: true, 
                     audio: true 
                 });
+                console.log('Got local stream');
                 
                 const localVideo = document.getElementById('localVideo');
                 localVideo.srcObject = stream;
@@ -561,39 +571,49 @@
 
                 document.getElementById('videoContainer').style.display = 'block';
 
-                // 다른 사용자에게 통화 요청
                 socket.emit('requestCall', ROOM_ID);
+                console.log('Emitted requestCall');
 
-                // 이벤트 리스너를 한 번만 등록
-                peer.off('call');
                 peer.on('call', (call) => {
-                    console.log('Receiving call...');
+                    console.log('Received call from peer');
                     currentCall = call;
                     call.answer(stream);
                     
                     call.on('stream', (remoteStream) => {
-                        console.log('Received remote stream');
+                        console.log('Got remote stream');
                         const remoteVideo = document.getElementById('remoteVideo');
-                        remoteVideo.srcObject = remoteStream;
+                        if (remoteVideo.srcObject !== remoteStream) {
+                            remoteVideo.srcObject = remoteStream;
+                            console.log('Set remote stream to video element');
+                        }
+                    });
+
+                    call.on('error', (err) => {
+                        console.error('Call error:', err);
                     });
                 });
 
-                // 새로운 사용자 참여 이벤트 리스너를 한 번만 등록
-                socket.off('userJoined');
                 socket.on('userJoined', (userId) => {
-                    console.log('New user joined:', userId);
+                    console.log('User joined:', userId);
                     const call = peer.call(userId, stream);
                     currentCall = call;
                     
                     call.on('stream', (remoteStream) => {
-                        console.log('Received remote stream from new user');
+                        console.log('Got remote stream from joined user');
                         const remoteVideo = document.getElementById('remoteVideo');
-                        remoteVideo.srcObject = remoteStream;
+                        if (remoteVideo.srcObject !== remoteStream) {
+                            remoteVideo.srcObject = remoteStream;
+                            console.log('Set remote stream to video element');
+                        }
+                    });
+
+                    call.on('error', (err) => {
+                        console.error('Call error:', err);
                     });
                 });
 
             } catch (err) {
-                console.error('영상통화 시작 오류:', err);
+                console.error('Video call error:', err);
                 alert('카메라나 마이크를 사용할 수 없습니다.');
             }
         }
