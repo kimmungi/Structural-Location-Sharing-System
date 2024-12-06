@@ -422,30 +422,18 @@
             secure: true,
             debug: 3,
             config: {
-                iceTransportPolicy: 'relay',
-                iceCandidatePoolSize: 10,
                 iceServers: [
-                    { urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] },
                     {
                         urls: [
-                            'turn:eu-0.turn.peerjs.com:3478',
-                            'turn:us-0.turn.peerjs.com:3478',
-                        ],
-                        username: 'peerjs',
-                        credential: 'peerjsp'
-                    },
-                    {
-                        urls: [
-                            'turn:numb.viagenie.ca:3478'
-                        ],
-                        username: 'webrtc@live.com',
-                        credential: 'muazkh'
+                            'stun:stun.l.google.com:19302',
+                            'stun:stun1.l.google.com:19302',
+                            'stun:stun2.l.google.com:19302'
+                        ]
                     },
                     {
                         urls: [
                             'turn:relay.metered.ca:80',
-                            'turn:relay.metered.ca:443',
-                            'turn:relay.metered.ca:443?transport=tcp'
+                            'turn:relay.metered.ca:443'
                         ],
                         username: 'e23d6e2a5f48431a5bce4ea6',
                         credential: 'xzwXvIV9bqDKGgdv'
@@ -568,7 +556,7 @@
             chatMessages.scrollTop = chatMessages.scrollHeight;
         });
 
-        // 페이지 로드 시 지��� 초기화
+        // 페이지 로드 시 지 초기화
         window.onload = initMap;
 
         // 엔터키로 메시지 전송
@@ -597,61 +585,53 @@
 
                 document.getElementById('videoContainer').style.display = 'block';
 
-                // 기존 이벤트 리스너 제거
-                peer.removeAllListeners('call');
-                
-                // 새로운 이벤트 리스너 등록
-                peer.on('call', async (call) => {
-                    console.log('Received incoming call');
+                // 기존 연결 종료
+                if (currentCall) {
+                    currentCall.close();
+                }
+
+                // 새로운 연결 설정
+                peer.on('call', (call) => {
+                    console.log('Receiving call...');
                     currentCall = call;
+                    
+                    // 스트림 응답
                     call.answer(stream);
                     
+                    // 원격 스트림 처리
                     call.on('stream', (remoteStream) => {
-                        console.log('Received remote stream in incoming call');
+                        console.log('Received remote stream');
                         const remoteVideo = document.getElementById('remoteVideo');
-                        remoteVideo.srcObject = remoteStream;
-                        remoteVideo.play().catch(e => console.error('Remote video play error:', e));
+                        if (remoteVideo.srcObject !== remoteStream) {
+                            remoteVideo.srcObject = remoteStream;
+                            remoteVideo.play().catch(err => console.error('Remote video play error:', err));
+                        }
                     });
                 });
 
-                // 다른 사용자에게 통화 요청
+                // 통화 요청
                 socket.emit('requestCall', ROOM_ID);
                 console.log('Emitted requestCall');
 
-                // userJoined 이벤트 리스너
-                socket.on('userJoined', async (userId) => {
+                // 새 사용자 참여 처리
+                socket.on('userJoined', (userId) => {
                     console.log('Making call to:', userId);
-                    try {
-                        const call = peer.call(userId, stream);
-                        currentCall = call;
-                        
-                        call.on('stream', (remoteStream) => {
-                            console.log('Received remote stream from outgoing call');
-                            const remoteVideo = document.getElementById('remoteVideo');
-                            if (remoteVideo.srcObject !== remoteStream) {
-                                remoteVideo.srcObject = remoteStream;
-                                console.log('Set remote stream to video element');
-                                remoteVideo.play().catch(e => console.error('Remote video play error:', e));
-                            }
-                        });
-
-                        call.on('close', () => {
-                            console.log('Call closed');
-                            const remoteVideo = document.getElementById('remoteVideo');
-                            remoteVideo.srcObject = null;
-                        });
-
-                        call.on('error', (error) => {
-                            console.error('Call error:', error);
-                        });
-                    } catch (error) {
-                        console.error('Error making call:', error);
-                    }
+                    const call = peer.call(userId, stream);
+                    currentCall = call;
+                    
+                    call.on('stream', (remoteStream) => {
+                        console.log('Received remote stream from new user');
+                        const remoteVideo = document.getElementById('remoteVideo');
+                        if (remoteVideo.srcObject !== remoteStream) {
+                            remoteVideo.srcObject = remoteStream;
+                            remoteVideo.play().catch(err => console.error('Remote video play error:', err));
+                        }
+                    });
                 });
 
             } catch (err) {
                 console.error('Video call error:', err);
-                alert('카메라나 마크를 사용할 수 없습니다.');
+                alert('카메라나 마이크를 사용할 수 없습니다.');
             }
         }
 
@@ -660,9 +640,17 @@
             if (currentCall) {
                 currentCall.close();
             }
-            if (document.getElementById('localVideo').srcObject) {
-                document.getElementById('localVideo').srcObject.getTracks().forEach(track => track.stop());
+            const localVideo = document.getElementById('localVideo');
+            const remoteVideo = document.getElementById('remoteVideo');
+            
+            if (localVideo.srcObject) {
+                localVideo.srcObject.getTracks().forEach(track => track.stop());
+                localVideo.srcObject = null;
             }
+            if (remoteVideo.srcObject) {
+                remoteVideo.srcObject = null;
+            }
+            
             document.getElementById('videoContainer').style.display = 'none';
         }
 
