@@ -509,16 +509,25 @@
             const chatMessages = document.getElementById('chatMessages');
             const messageElement = document.createElement('div');
             
-            if (typeof message === 'object' && message.type === 'image') {
+            if (message.type === 'image') {
+                // 이미지 메시지 처리
                 const img = document.createElement('img');
                 img.src = message.data;
                 img.className = 'message-image';
-                img.onclick = () => {
-                    window.open(message.data, '_blank');
-                };
                 messageElement.appendChild(img);
             } else {
-                messageElement.textContent = message;
+                // 텍스트 메시지 처리
+                messageElement.className = `chat-message ${message.role.includes('rescuer') ? 'rescuer-message' : 'victim-message'}`;
+                
+                const senderElement = document.createElement('div');
+                senderElement.className = 'message-sender';
+                senderElement.textContent = message.sender;
+                
+                const textElement = document.createElement('div');
+                textElement.textContent = message.text;
+                
+                messageElement.appendChild(senderElement);
+                messageElement.appendChild(textElement);
             }
             
             chatMessages.appendChild(messageElement);
@@ -624,20 +633,36 @@
         // 구조대 모드 토글 함수
         function toggleRescuerMode() {
             if (userRole === 'victim') {
-                // 다음 가용 구조대 번호 찾기
                 rescuerNumber++;
                 userRole = `rescuer-${rescuerNumber}`;
                 
-                // 헤더 제목 업데이트
-                document.getElementById('headerTitle').textContent = `구조 위치공유 시스템 (구조대${rescuerNumber})`;
+                // 수정 가능한 입력 필드로 변경
+                const headerTitle = document.getElementById('headerTitle');
+                headerTitle.innerHTML = `
+                    구조 위치공유 시스템 (<span id="rescuerLabel" 
+                        onclick="event.stopPropagation(); editRescuerNumber();" 
+                        style="text-decoration: underline; cursor: pointer;">구조대${rescuerNumber}</span>)
+                `;
                 
-                // 마커 스타일 변경
                 updateMarkerStyle();
-                
-                // 서버에 역할 변경 알림
                 socket.emit('userRole', { role: userRole });
                 
                 alert(`구조대 ${rescuerNumber}번으로 전환되었습니다.`);
+            }
+        }
+
+        // 구조대 번호 수정 함수 추가
+        function editRescuerNumber() {
+            const newNumber = prompt('구조대 번호를 입력하세요 (1-10):', rescuerNumber);
+            if (newNumber && !isNaN(newNumber) && newNumber >= 1 && newNumber <= 10) {
+                rescuerNumber = parseInt(newNumber);
+                userRole = `rescuer-${rescuerNumber}`;
+                
+                const rescuerLabel = document.getElementById('rescuerLabel');
+                rescuerLabel.textContent = `구조대${rescuerNumber}`;
+                
+                updateMarkerStyle();
+                socket.emit('userRole', { role: userRole });
             }
         }
 
@@ -661,14 +686,20 @@
         // 채팅 메시지 전송 함수 수정
         function sendMessage() {
             const chatInput = document.getElementById('chatInput');
-            const message = chatInput.value;
+            const message = chatInput.value.trim();
             
-            if (message.trim() !== '') {
-                socket.emit('chatMessage', {
+            if (message !== '') {
+                const messageData = {
                     text: message,
                     role: userRole,
-                    sender: userRole.includes('rescuer') ? `구조대${rescuerNumber}` : '요구조자'
-                });
+                    sender: userRole.includes('rescuer') ? `구조대${rescuerNumber}` : '요구조자',
+                    type: 'text'
+                };
+                
+                // 메시지 전송
+                socket.emit('chatMessage', messageData);
+                
+                // 입력 필드 초기화
                 chatInput.value = '';
             }
         }
