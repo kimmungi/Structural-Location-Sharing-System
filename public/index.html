@@ -281,11 +281,63 @@
         .message-image:hover {
             transform: scale(1.05);
         }
+
+        #headerTitle {
+            font-size: 1.5rem;
+            color: #333;
+            margin-bottom: 15px;
+            text-align: center;
+            cursor: pointer;
+            padding: 10px;
+            transition: all 0.3s ease;
+        }
+
+        #headerTitle:hover {
+            background-color: #f0f0f0;
+            border-radius: 5px;
+        }
+
+        /* 마커 스타일 */
+        .victim-marker {
+            background-color: #ff4444;
+            border: 2px solid white;
+            border-radius: 50%;
+        }
+
+        .rescuer-marker {
+            background-color: #0066ff;
+            border: 2px solid white;
+            border-radius: 0; /* 사각형 마커 */
+        }
+
+        /* 채팅 메시지 스타일 */
+        .chat-message {
+            padding: 8px;
+            margin: 4px 0;
+            border-radius: 8px;
+        }
+
+        .victim-message {
+            background-color: #ffe4e4;
+            margin-right: 20%;
+        }
+
+        .rescuer-message {
+            background-color: #e4e4ff;
+            margin-left: 20%;
+            text-align: right;
+        }
+
+        .message-sender {
+            font-weight: bold;
+            font-size: 0.8em;
+            margin-bottom: 4px;
+        }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
 <body>
-    <h1>구조 위치공유 시스템</h1>
+    <h1 id="headerTitle" onclick="toggleRescuerMode()">구조 위치공유 시스템</h1>
 
     <div id="map"></div>
 
@@ -506,7 +558,7 @@
             chatIcon.style.display = 'flex';
         }
 
-        // 이미지 전송 관련 코드 수정
+        // 이미지 전송 관련 코드 수
         document.getElementById('imageInput').addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (file) {
@@ -564,6 +616,97 @@
                 reader.readAsDataURL(file);
             }
         });
+
+        let userRole = 'victim'; // 기본값은 요구조자
+        let rescuerNumber = 0;
+        let currentMarker = null;
+
+        // 구조대 모드 토글 함수
+        function toggleRescuerMode() {
+            if (userRole === 'victim') {
+                // 다음 가용 구조대 번호 찾기
+                rescuerNumber++;
+                userRole = `rescuer-${rescuerNumber}`;
+                
+                // 헤더 제목 업데이트
+                document.getElementById('headerTitle').textContent = `구조 위치공유 시스템 (구조대${rescuerNumber})`;
+                
+                // 마커 스타일 변경
+                updateMarkerStyle();
+                
+                // 서버에 역할 변경 알림
+                socket.emit('userRole', { role: userRole });
+                
+                alert(`구조대 ${rescuerNumber}번으로 전환되었습니다.`);
+            }
+        }
+
+        // 마커 스타일 업데이트 함수
+        function updateMarkerStyle() {
+            if (currentMarker) {
+                const isRescuer = userRole.includes('rescuer');
+                const markerImage = new kakao.maps.MarkerImage(
+                    isRescuer ? 
+                    // 구조대용 사각형 마커
+                    `data:image/svg+xml;charset=utf-8,<svg width="24" height="24" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="20" height="20" fill="%230066ff"/></svg>` :
+                    // 요구조자용 원형 마커
+                    `data:image/svg+xml;charset=utf-8,<svg width="24" height="24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" fill="%23ff4444"/></svg>`,
+                    new kakao.maps.Size(24, 24),
+                    { offset: new kakao.maps.Point(12, 12) }
+                );
+                currentMarker.setImage(markerImage);
+            }
+        }
+
+        // 채팅 메시지 전송 함수 수정
+        function sendMessage() {
+            const chatInput = document.getElementById('chatInput');
+            const message = chatInput.value;
+            
+            if (message.trim() !== '') {
+                socket.emit('chatMessage', {
+                    text: message,
+                    role: userRole,
+                    sender: userRole.includes('rescuer') ? `구조대${rescuerNumber}` : '요구조자'
+                });
+                chatInput.value = '';
+            }
+        }
+
+        // 위치 업데이트 함수 수정
+        function updateLocation(position) {
+            const currentPos = new kakao.maps.LatLng(
+                position.coords.latitude, 
+                position.coords.longitude
+            );
+            
+            if (!currentMarker) {
+                const markerImage = new kakao.maps.MarkerImage(
+                    userRole.includes('rescuer') ?
+                    `data:image/svg+xml;charset=utf-8,<svg width="24" height="24" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="20" height="20" fill="%230066ff"/></svg>` :
+                    `data:image/svg+xml;charset=utf-8,<svg width="24" height="24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" fill="%23ff4444"/></svg>`,
+                    new kakao.maps.Size(24, 24),
+                    { offset: new kakao.maps.Point(12, 12) }
+                );
+                
+                currentMarker = new kakao.maps.Marker({
+                    position: currentPos,
+                    image: markerImage
+                });
+                currentMarker.setMap(map);
+            } else {
+                currentMarker.setPosition(currentPos);
+            }
+            
+            map.setCenter(currentPos);
+            
+            // 위치 정보와 역할 정보 전송
+            socket.emit('locationUpdate', {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+                role: userRole
+            });
+        }
     </script>
 </body>
 </html>
