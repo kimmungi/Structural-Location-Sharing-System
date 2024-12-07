@@ -307,17 +307,10 @@
             border-radius: 0; /* 사각형 마커 */
         }
 
-        /* 기본 메시지 컨테이너 스타일 */
+        /* 메시지 전체 �테이너 */
         #chatMessages div {
             margin-bottom: 8px;
             font-size: 0.9rem;
-        }
-
-        /* 메시지 내용 스타일 */
-        .chat-message {
-            padding: 8px;
-            background: #e8f4ff;
-            border-radius: 8px;
         }
 
         /* 발신자 이름 스타일 */
@@ -325,11 +318,20 @@
             font-weight: bold;
             margin-bottom: 4px;
             color: #0066ff;  /* 구조대 이름 색상 */
+            background: none;  /* 배경 제�� */
+            padding: 0;  /* 패딩 제거 */
         }
 
         /* 요구조자 발신자 이름 스타일 */
         .victim-message .message-sender {
             color: #333;  /* 요구조자 이름 색상 */
+        }
+
+        /* 실제 메시지 내� 스타일 */
+        .message-content {
+            padding: 8px;
+            background: #e8f4ff;
+            border-radius: 8px;
         }
 
         /* 구조대/요구조자 메시지 위치 조정 */
@@ -525,17 +527,19 @@
                 messageElement.appendChild(img);
             } else {
                 // 텍스트 메시지 처리
-                messageElement.className = `chat-message ${message.role.includes('rescuer') ? 'rescuer-message' : 'victim-message'}`;
+                messageElement.className = message.role.includes('rescuer') ? 'rescuer-message' : 'victim-message';
                 
+                // 발신자 이름
                 const senderElement = document.createElement('div');
                 senderElement.className = 'message-sender';
                 senderElement.textContent = message.sender;
-                
-                const textElement = document.createElement('div');
-                textElement.textContent = message.text;
-                
                 messageElement.appendChild(senderElement);
-                messageElement.appendChild(textElement);
+                
+                // 메시지 내용
+                const contentElement = document.createElement('div');
+                contentElement.className = 'message-content';
+                contentElement.textContent = message.text;
+                messageElement.appendChild(contentElement);
             }
             
             chatMessages.appendChild(messageElement);
@@ -758,12 +762,12 @@
 
         // 다른 사용자의 위치 업데이트 처리 함수 수정
         socket.on('userLocation', (data) => {
-            if (!data || !data.role) return; // �이터나 역할 정보가 없으면 무시
+            if (!data || !data.role) return; // 데이터나 역할 정보가 없으면 무시
 
             const pos = new kakao.maps.LatLng(data.latitude, data.longitude);
             
             if (!otherMarkers[data.id]) {
-                // 새로운 마커 �성
+                // 새로운 마커 성
                 const isRescuer = data.role && data.role.includes('rescuer');
                 const markerImage = new kakao.maps.MarkerImage(
                     isRescuer ? 
