@@ -315,23 +315,29 @@
             padding: 8px;
             margin: 4px 0;
             border-radius: 8px;
+            color: #333;
         }
 
         .victim-message {
-            background-color: #ffe4e4;
+            background-color: #f5f5f5;
             margin-right: 20%;
         }
 
         .rescuer-message {
-            background-color: #e4e4ff;
+            background-color: #f5f5f5;
             margin-left: 20%;
             text-align: right;
         }
 
         .message-sender {
             font-weight: bold;
-            font-size: 0.8em;
+            font-size: 0.9em;
             margin-bottom: 4px;
+            color: #0066ff;
+        }
+
+        .victim-message .message-sender {
+            color: #333;
         }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
@@ -510,7 +516,7 @@
             const messageElement = document.createElement('div');
             
             if (message.type === 'image') {
-                // 이미지 메시지 처리
+                // 이미지 ��시지 처리
                 const img = document.createElement('img');
                 img.src = message.data;
                 img.className = 'message-image';
@@ -573,7 +579,7 @@
             if (file) {
                 // 파일 크기 체크 (5MB 제한)
                 if (file.size > 5 * 1024 * 1024) {
-                    alert('파일 크기는 5MB를 초과할 수 없습니다.');
+                    alert('파일 크기는 5MB��� 초과할 수 없습니다.');
                     return;
                 }
 
@@ -672,10 +678,15 @@
                 const isRescuer = userRole.includes('rescuer');
                 const markerImage = new kakao.maps.MarkerImage(
                     isRescuer ? 
-                    // 구조대용 사각형 마커
-                    `data:image/svg+xml;charset=utf-8,<svg width="24" height="24" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="20" height="20" fill="%230066ff"/></svg>` :
+                    // 구조대용 십자가 마커 (빨간색)
+                    `data:image/svg+xml;charset=utf-8,<svg width="24" height="24" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="10" y="4" width="4" height="16" fill="%23ff0000"/>
+                        <rect x="4" y="10" width="16" height="4" fill="%23ff0000"/>
+                    </svg>` :
                     // 요구조자용 원형 마커
-                    `data:image/svg+xml;charset=utf-8,<svg width="24" height="24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" fill="%23ff4444"/></svg>`,
+                    `data:image/svg+xml;charset=utf-8,<svg width="24" height="24" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="12" r="10" fill="%23ff4444"/>
+                    </svg>`,
                     new kakao.maps.Size(24, 24),
                     { offset: new kakao.maps.Point(12, 12) }
                 );
@@ -714,8 +725,13 @@
             if (!currentMarker) {
                 const markerImage = new kakao.maps.MarkerImage(
                     userRole.includes('rescuer') ?
-                    `data:image/svg+xml;charset=utf-8,<svg width="24" height="24" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="20" height="20" fill="%230066ff"/></svg>` :
-                    `data:image/svg+xml;charset=utf-8,<svg width="24" height="24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" fill="%23ff4444"/></svg>`,
+                    `data:image/svg+xml;charset=utf-8,<svg width="24" height="24" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="10" y="4" width="4" height="16" fill="%23ff0000"/>
+                        <rect x="4" y="10" width="16" height="4" fill="%23ff0000"/>
+                    </svg>` :
+                    `data:image/svg+xml;charset=utf-8,<svg width="24" height="24" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="12" r="10" fill="%23ff4444"/>
+                    </svg>`,
                     new kakao.maps.Size(24, 24),
                     { offset: new kakao.maps.Point(12, 12) }
                 );
@@ -731,7 +747,6 @@
             
             map.setCenter(currentPos);
             
-            // 위치 정보와 역할 정보 전송
             socket.emit('locationUpdate', {
                 latitude: position.coords.latitude,
                 longitude: position.coords.longitude,
