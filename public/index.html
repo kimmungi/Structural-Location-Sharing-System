@@ -307,32 +307,32 @@
             border-radius: 0; /* 사각형 마커 */
         }
 
-        /* 기본 메시지 컨이너 스타일 */
+        /* 기본 메시지 컨테이너 스타일 */
         #chatMessages div {
             margin-bottom: 8px;
             font-size: 0.9rem;
         }
 
-        /* 메시지 내용 스일 */
+        /* 메시지 내용 스타일 */
         .chat-message {
             padding: 8px;
             background: #e8f4ff;
             border-radius: 8px;
         }
 
-        /* 발신자 이름 스일 */
+        /* 발신자 이름 스타일 */
         .message-sender {
             font-weight: bold;
             margin-bottom: 4px;
-            color: #0066ff;  /* 구대 이름 색상 */
+            color: #0066ff;  /* 구조대 이름 색상 */
         }
 
         /* 요구조자 발신자 이름 스타일 */
         .victim-message .message-sender {
-            color: #333;  /* 요구자 이름 색상 */
+            color: #333;  /* 요구조자 이름 색상 */
         }
 
-        /* 구조대/요구자 메시지 위치 조정 */
+        /* 구조대/요구조자 메시지 위치 조정 */
         .victim-message {
             margin-right: 20%;
         }
@@ -680,24 +680,44 @@
                 const isRescuer = userRole.includes('rescuer');
                 const markerImage = new kakao.maps.MarkerImage(
                     isRescuer ? 
-                    // 구조대용 마커 (소방 구조대 스타일)
-                    `data:image/svg+xml;charset=utf-8,<svg width="29" height="42" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M14.5 0C6.5 0 0 6.5 0 14.5C0 25.4 14.5 42 14.5 42C14.5 42 29 25.4 29 14.5C29 6.5 22.5 0 14.5 0Z" fill="%23FF3B30"/>
-                        <path d="M14.5 7L17 12H12L14.5 7Z" fill="white"/>
-                        <path d="M14.5 22L12 17H17L14.5 22Z" fill="white"/>
-                        <path d="M7 14.5L12 12V17L7 14.5Z" fill="white"/>
-                        <path d="M22 14.5L17 17V12L22 14.5Z" fill="white"/>
+                    // 구조대용 십자가 마커 (빨간색)
+                    `data:image/svg+xml;charset=utf-8,<svg width="24" height="24" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="10" y="4" width="4" height="16" fill="%23ff0000"/>
+                        <rect x="4" y="10" width="16" height="4" fill="%23ff0000"/>
                     </svg>` :
-                    // 요구조자용 기본 마커
-                    'https://t1.daumcdn.net/mapjsapi/images/2x/marker.png',
-                    isRescuer ? new kakao.maps.Size(29, 42) : new kakao.maps.Size(29, 42),
-                    { offset: new kakao.maps.Point(14, 42) }
+                    // 요구조자용 원형 마커
+                    `data:image/svg+xml;charset=utf-8,<svg width="24" height="24" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="12" r="10" fill="%23ff4444"/>
+                    </svg>`,
+                    new kakao.maps.Size(24, 24),
+                    { offset: new kakao.maps.Point(12, 12) }
                 );
                 currentMarker.setImage(markerImage);
             }
         }
 
-        // 위치 업데이트 함수
+        // 채팅 메시지 전송 함수 수정
+        function sendMessage() {
+            const chatInput = document.getElementById('chatInput');
+            const message = chatInput.value.trim();
+            
+            if (message !== '') {
+                const messageData = {
+                    text: message,
+                    role: userRole,
+                    sender: userRole.includes('rescuer') ? `구조대${rescuerNumber}` : '요구조자',
+                    type: 'text'
+                };
+                
+                // 메시지 전송
+                socket.emit('chatMessage', messageData);
+                
+                // 입력 필드 초기화
+                chatInput.value = '';
+            }
+        }
+
+        // 위치 업데이트 함수 수정
         function updateLocation(position) {
             const currentPos = new kakao.maps.LatLng(
                 position.coords.latitude, 
@@ -705,19 +725,17 @@
             );
             
             if (!currentMarker) {
-                const isRescuer = userRole.includes('rescuer');
                 const markerImage = new kakao.maps.MarkerImage(
-                    isRescuer ? 
-                    `data:image/svg+xml;charset=utf-8,<svg width="29" height="42" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M14.5 0C6.5 0 0 6.5 0 14.5C0 25.4 14.5 42 14.5 42C14.5 42 29 25.4 29 14.5C29 6.5 22.5 0 14.5 0Z" fill="%23FF3B30"/>
-                        <path d="M14.5 7L17 12H12L14.5 7Z" fill="white"/>
-                        <path d="M14.5 22L12 17H17L14.5 22Z" fill="white"/>
-                        <path d="M7 14.5L12 12V17L7 14.5Z" fill="white"/>
-                        <path d="M22 14.5L17 17V12L22 14.5Z" fill="white"/>
+                    userRole.includes('rescuer') ?
+                    `data:image/svg+xml;charset=utf-8,<svg width="24" height="24" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="10" y="4" width="4" height="16" fill="%23ff0000"/>
+                        <rect x="4" y="10" width="16" height="4" fill="%23ff0000"/>
                     </svg>` :
-                    'https://t1.daumcdn.net/mapjsapi/images/2x/marker.png',
-                    isRescuer ? new kakao.maps.Size(29, 42) : new kakao.maps.Size(29, 42),
-                    { offset: new kakao.maps.Point(14, 42) }
+                    `data:image/svg+xml;charset=utf-8,<svg width="24" height="24" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="12" r="10" fill="%23ff4444"/>
+                    </svg>`,
+                    new kakao.maps.Size(24, 24),
+                    { offset: new kakao.maps.Point(12, 12) }
                 );
                 
                 currentMarker = new kakao.maps.Marker({
@@ -737,6 +755,53 @@
                 role: userRole
             });
         }
+
+        // 다른 사용자의 위치 업데이트 처리 함수 수정
+        socket.on('userLocation', (data) => {
+            if (!data || !data.role) return; // �이터나 역할 정보가 없으면 무시
+
+            const pos = new kakao.maps.LatLng(data.latitude, data.longitude);
+            
+            if (!otherMarkers[data.id]) {
+                // 새로운 마커 �성
+                const isRescuer = data.role && data.role.includes('rescuer');
+                const markerImage = new kakao.maps.MarkerImage(
+                    isRescuer ? 
+                    // 구조대용 마커
+                    `data:image/svg+xml;charset=utf-8,<svg width="29" height="42" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M14.5 0C6.5 0 0 6.5 0 14.5C0 25.4 14.5 42 14.5 42C14.5 42 29 25.4 29 14.5C29 6.5 22.5 0 14.5 0Z" fill="%23FF3B30"/>
+                        <path d="M14.5 7L17 12H12L14.5 7Z" fill="white"/>
+                        <path d="M14.5 22L12 17H17L14.5 22Z" fill="white"/>
+                        <path d="M7 14.5L12 12V17L7 14.5Z" fill="white"/>
+                        <path d="M22 14.5L17 17V12L22 14.5Z" fill="white"/>
+                    </svg>` :
+                    // 요구조자용 기본 마커
+                    'https://t1.daumcdn.net/mapjsapi/images/2x/marker.png',
+                    new kakao.maps.Size(29, 42),
+                    { offset: new kakao.maps.Point(14, 42) }
+                );
+
+                otherMarkers[data.id] = new kakao.maps.Marker({
+                    position: pos,
+                    map: map,
+                    image: markerImage
+                });
+            } else {
+                // 기존 마커 위치 업데이트
+                otherMarkers[data.id].setPosition(pos);
+            }
+        });
+
+        // 사용자 연결 해제 처리
+        socket.on('userDisconnected', (userId) => {
+            if (otherMarkers[userId]) {
+                otherMarkers[userId].setMap(null);
+                delete otherMarkers[userId];
+            }
+        });
+
+        // 마커 저장을 위한 객체
+        const otherMarkers = {};
     </script>
 </body>
 </html>

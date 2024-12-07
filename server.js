@@ -45,8 +45,13 @@ io.on("connection", (socket) => {
     socket.to(roomId).emit("callRequested");
   });
 
-  socket.on("locationUpdate", (location) => {
-    socket.broadcast.emit("rescuerLocation", location);
+  socket.on("locationUpdate", (data) => {
+    socket.broadcast.emit("userLocation", {
+      id: socket.id,
+      latitude: data.latitude,
+      longitude: data.longitude,
+      role: data.role,
+    });
   });
 
   socket.on("chatMessage", (message) => {
@@ -54,7 +59,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
-    console.log("사용자 연결 해제");
+    io.emit("userDisconnected", socket.id);
   });
 });
 
