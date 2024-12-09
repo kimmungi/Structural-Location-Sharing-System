@@ -586,7 +586,7 @@
                 chatIcon.style.display = 'none'; // 채팅창이 열리면 아이콘 숨김
             } else {
                 chatContainer.style.display = 'none';
-                chatIcon.style.display = 'flex'; // 채팅창이 닫히면 아이콘 표시
+                chatIcon.style.display = 'flex'; // 채팅창이 ��히면 아이콘 표시
             }
         }
 
@@ -676,21 +676,22 @@
                         style="text-decoration: underline; cursor: pointer;">구조대${rescuerNumber}</span>)
                 `;
                 
-                // 마커 이미지 변경
-                if (currentMarker) {
-                    const markerImage = new kakao.maps.MarkerImage(
-                        `data:image/svg+xml;charset=utf-8,<svg width="29" height="42" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M14.5 0C6.5 0 0 6.5 0 14.5C0 25.4 14.5 42 14.5 42C14.5 42 29 25.4 29 14.5C29 6.5 22.5 0 14.5 0Z" fill="%23FF3B30"/>
-                            <path d="M14.5 7L17 12H12L14.5 7Z" fill="white"/>
-                            <path d="M14.5 22L12 17H17L14.5 22Z" fill="white"/>
-                            <path d="M7 14.5L12 12V17L7 14.5Z" fill="white"/>
-                            <path d="M22 14.5L17 17V12L22 14.5Z" fill="white"/>
-                        </svg>`,
-                        new kakao.maps.Size(29, 42),
-                        { offset: new kakao.maps.Point(14, 42) }
-                    );
-                    currentMarker.setImage(markerImage);
-                }
+                // 마커 이미지 변경 (구조대 번호에 따라 다른 색상)
+    if (currentMarker) {
+        const markerColors = ['#FF3B30', '#007AFF', '#34C759', '#FF9500', '#5856D6', 
+                               '#AF52DE', '#FF2D55', '#8E8E93', '#00C7BE', '#FFD700'];
+        const markerColor = markerColors[rescuerNumber - 1] || '#FF3B30';
+        
+        const markerImage = new kakao.maps.MarkerImage(
+            `data:image/svg+xml;charset=utf-8,<svg width="29" height="42" xmlns="http://www.w3.org/2000/svg">
+                <path d="M14.5 0C6.5 0 0 6.5 0 14.5C0 25.4 14.5 42 14.5 42C14.5 42 29 25.4 29 14.5C29 6.5 22.5 0 14.5 0Z" fill="${markerColor}"/>
+                <text x="14.5" y="21" text-anchor="middle" fill="white" font-size="10" font-family="Arial" dy=".3em">${rescuerNumber}</text>
+            </svg>`,
+            new kakao.maps.Size(29, 42),
+            { offset: new kakao.maps.Point(14, 42) }
+        );
+        currentMarker.setImage(markerImage);
+    }
                 
                 // 서버에 역할 변경 알림
                 socket.emit('userRole', { role: userRole });
@@ -729,23 +730,21 @@
             }
         }
 
-        // 마커 스타일 업데이트 함수
+        // 마커 스타일 업데이트 함수 수정
         function updateMarkerStyle() {
             if (currentMarker) {
                 const isRescuer = userRole.includes('rescuer');
                 const markerImage = new kakao.maps.MarkerImage(
                     isRescuer ? 
-                    // 구조대용 십자가 마커 (빨간색)
-                    `data:image/svg+xml;charset=utf-8,<svg width="24" height="24" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="10" y="4" width="4" height="16" fill="%23ff0000"/>
-                        <rect x="4" y="10" width="16" height="4" fill="%23ff0000"/>
+                    // 구조대용 마커 (구조대 번호에 따라)
+                    `data:image/svg+xml;charset=utf-8,<svg width="29" height="42" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M14.5 0C6.5 0 0 6.5 0 14.5C0 25.4 14.5 42 14.5 42C14.5 42 29 25.4 29 14.5C29 6.5 22.5 0 14.5 0Z" fill="%23FF3B30"/>
+                        <text x="14.5" y="21" text-anchor="middle" fill="white" font-size="10" font-family="Arial" dy=".3em">${rescuerNumber}</text>
                     </svg>` :
-                    // 요구조자용 원형 마커
-                    `data:image/svg+xml;charset=utf-8,<svg width="24" height="24" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="12" cy="12" r="10" fill="%23ff4444"/>
-                    </svg>`,
-                    new kakao.maps.Size(24, 24),
-                    { offset: new kakao.maps.Point(12, 12) }
+                    // 요구조자용 기본 마커
+                    'https://t1.daumcdn.net/mapjsapi/images/2x/marker.png',
+                    new kakao.maps.Size(29, 42),
+                    { offset: new kakao.maps.Point(14, 42) }
                 );
                 currentMarker.setImage(markerImage);
             }
@@ -785,10 +784,7 @@
                     isRescuer ? 
                     `data:image/svg+xml;charset=utf-8,<svg width="29" height="42" xmlns="http://www.w3.org/2000/svg">
                         <path d="M14.5 0C6.5 0 0 6.5 0 14.5C0 25.4 14.5 42 14.5 42C14.5 42 29 25.4 29 14.5C29 6.5 22.5 0 14.5 0Z" fill="%23FF3B30"/>
-                        <path d="M14.5 7L17 12H12L14.5 7Z" fill="white"/>
-                        <path d="M14.5 22L12 17H17L14.5 22Z" fill="white"/>
-                        <path d="M7 14.5L12 12V17L7 14.5Z" fill="white"/>
-                        <path d="M22 14.5L17 17V12L22 14.5Z" fill="white"/>
+                        <text x="14.5" y="21" text-anchor="middle" fill="white" font-size="10" font-family="Arial" dy=".3em">${rescuerNumber}</text>
                     </svg>` :
                     'https://t1.daumcdn.net/mapjsapi/images/2x/marker.png',
                     new kakao.maps.Size(29, 42),
@@ -803,9 +799,6 @@
             } else {
                 currentMarker.setPosition(currentPos);
             }
-            
-            // 자동으로 지도 중심을 내 위치로 설정하지 않음
-            // map.setCenter(currentPos); // 이 줄을 제거하여 자동 이동을 막음
             
             socket.emit('locationUpdate', {
                 latitude: position.coords.latitude,
