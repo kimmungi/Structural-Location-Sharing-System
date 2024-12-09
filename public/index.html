@@ -505,8 +505,7 @@
                         marker.setPosition(currentPos);
                     }
 
-                    // 지도 중심 이동
-                    map.setCenter(currentPos);
+                    
 
                     // 위치 정보 서버로 송신
                     socket.emit('locationUpdate', {
