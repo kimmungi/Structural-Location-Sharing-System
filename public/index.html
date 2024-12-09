@@ -476,7 +476,7 @@
         function initMap() {
             const mapContainer = document.getElementById('map');
             const mapOption = {
-                center: new kakao.maps.LatLng(37.566826, 126.978656), // 서울시청 좌표로 초기화
+                center: new kakao.maps.LatLng(37.566826, 126.978656), // 서울시청 좌표�� 초기화
                 level: 3
             };
             
@@ -514,7 +514,7 @@
                     });
                 }, 
                 (error) => {
-                    console.error('위치 적보 오류:', error);
+                    console.error('위�� 적보 오류:', error);
                 }, 
                 {
                     enableHighAccuracy: true,
@@ -586,7 +586,7 @@
                 chatIcon.style.display = 'none'; // 채팅창이 열리면 아이콘 숨김
             } else {
                 chatContainer.style.display = 'none';
-                chatIcon.style.display = 'flex'; // 채팅창이 ��히면 아이콘 표시
+                chatIcon.style.display = 'flex'; // 채팅창이 닫히면 아이콘 표시
             }
         }
 
@@ -736,13 +736,15 @@
                 const isRescuer = userRole.includes('rescuer');
                 const markerImage = new kakao.maps.MarkerImage(
                     isRescuer ? 
-                    // 구조대용 마커 (구조대 번호에 따라)
+                    // 구조대용 빨간색 마커
                     `data:image/svg+xml;charset=utf-8,<svg width="29" height="42" xmlns="http://www.w3.org/2000/svg">
                         <path d="M14.5 0C6.5 0 0 6.5 0 14.5C0 25.4 14.5 42 14.5 42C14.5 42 29 25.4 29 14.5C29 6.5 22.5 0 14.5 0Z" fill="%23FF3B30"/>
                         <text x="14.5" y="21" text-anchor="middle" fill="white" font-size="10" font-family="Arial" dy=".3em">${rescuerNumber}</text>
                     </svg>` :
-                    // 요구조자용 기본 마커
-                    'https://t1.daumcdn.net/mapjsapi/images/2x/marker.png',
+                    // 요구조자용 파란색 마커
+                    `data:image/svg+xml;charset=utf-8,<svg width="29" height="42" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M14.5 0C6.5 0 0 6.5 0 14.5C0 25.4 14.5 42 14.5 42C14.5 42 29 25.4 29 14.5C29 6.5 22.5 0 14.5 0Z" fill="%230066ff"/>
+                    </svg>`,
                     new kakao.maps.Size(29, 42),
                     { offset: new kakao.maps.Point(14, 42) }
                 );
@@ -786,7 +788,9 @@
                         <path d="M14.5 0C6.5 0 0 6.5 0 14.5C0 25.4 14.5 42 14.5 42C14.5 42 29 25.4 29 14.5C29 6.5 22.5 0 14.5 0Z" fill="%23FF3B30"/>
                         <text x="14.5" y="21" text-anchor="middle" fill="white" font-size="10" font-family="Arial" dy=".3em">${rescuerNumber}</text>
                     </svg>` :
-                    'https://t1.daumcdn.net/mapjsapi/images/2x/marker.png',
+                    `data:image/svg+xml;charset=utf-8,<svg width="29" height="42" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M14.5 0C6.5 0 0 6.5 0 14.5C0 25.4 14.5 42 14.5 42C14.5 42 29 25.4 29 14.5C29 6.5 22.5 0 14.5 0Z" fill="%230066ff"/>
+                    </svg>`,
                     new kakao.maps.Size(29, 42),
                     { offset: new kakao.maps.Point(14, 42) }
                 );
