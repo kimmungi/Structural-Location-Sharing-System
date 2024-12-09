@@ -856,11 +856,32 @@
 
         // 내 위치로 이동하는 함수
         function moveToMyLocation() {
-            if (currentMarker) {
-                const currentPos = currentMarker.getPosition();
-                map.setCenter(currentPos);
-            }
-        }
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition((position) => {
+            const currentPos = new kakao.maps.LatLng(
+                position.coords.latitude, 
+                position.coords.longitude
+            );
+            
+            // 지도 중심을 현재 위치로 이동
+            map.setCenter(currentPos);
+            
+            // 줌 레벨 조정 (선택사항)
+            map.setLevel(3);
+        }, 
+        (error) => {
+            console.error('위치 정보 오류:', error);
+            alert('현재 위치를 가져올 수 없습니다.');
+        }, 
+        {
+            enableHighAccuracy: true,
+            timeout: 5000,
+            maximumAge: 0
+        });
+    } else {
+        alert('위치 정보를 지원하지 않는 브라우저입니다.');
+    }
+}
     </script>
 </body>
 </html>
