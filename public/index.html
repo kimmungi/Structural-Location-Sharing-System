@@ -453,7 +453,7 @@
             console.log('PeerJS connection closed');
         });
 
-        // 연결 이벤트 핸들러 추가
+        // 연결 이벤�� 핸들러 추가
         socket.on('connect', () => {
             console.log('Socket connected');
         });
@@ -476,7 +476,7 @@
         function initMap() {
             const mapContainer = document.getElementById('map');
             const mapOption = {
-                center: new kakao.maps.LatLng(37.566826, 126.978656), // 서울시청 좌표�� 초기화
+                center: new kakao.maps.LatLng(37.566826, 126.978656), // 서울시청 좌표 초기화
                 level: 3
             };
             
@@ -514,7 +514,7 @@
                     });
                 }, 
                 (error) => {
-                    console.error('위�� 적보 오류:', error);
+                    console.error('위치 정보 오류:', error);
                 }, 
                 {
                     enableHighAccuracy: true,
@@ -700,7 +700,7 @@
             }
         }
 
-        // 구조대 번호 수정 함수도 마커 업데이트 추가
+        // 구조대 번호 수정 함수도 ��커 업데이트 추가
         function editRescuerNumber() {
             const newNumber = prompt('구조대 번호를 입력하세요 (1-10):', rescuerNumber);
             if (newNumber && !isNaN(newNumber) && newNumber >= 1 && newNumber <= 10) {
@@ -780,28 +780,23 @@
                 position.coords.longitude
             );
             
-            if (!currentMarker) {
-                const isRescuer = userRole.includes('rescuer');
-                const markerImage = new kakao.maps.MarkerImage(
-                    isRescuer ? 
-                    `data:image/svg+xml;charset=utf-8,<svg width="29" height="42" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M14.5 0C6.5 0 0 6.5 0 14.5C0 25.4 14.5 42 14.5 42C14.5 42 29 25.4 29 14.5C29 6.5 22.5 0 14.5 0Z" fill="%23FF3B30"/>
-                        <text x="14.5" y="21" text-anchor="middle" fill="white" font-size="10" font-family="Arial" dy=".3em">${rescuerNumber}</text>
-                    </svg>` :
-                    `data:image/svg+xml;charset=utf-8,<svg width="29" height="42" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M14.5 0C6.5 0 0 6.5 0 14.5C0 25.4 14.5 42 14.5 42C14.5 42 29 25.4 29 14.5C29 6.5 22.5 0 14.5 0Z" fill="%230066ff"/>
-                    </svg>`,
-                    new kakao.maps.Size(29, 42),
-                    { offset: new kakao.maps.Point(14, 42) }
-                );
-                
-                currentMarker = new kakao.maps.Marker({
-                    position: currentPos,
-                    image: markerImage
-                });
-                currentMarker.setMap(map);
-            } else {
-                currentMarker.setPosition(currentPos);
+            const isRescuer = userRole.includes('rescuer');
+
+            // 기존 위치 표시 제거
+            if (currentPosition) {
+                currentPosition.outerCircle.setMap(null);
+                currentPosition.innerCircle.setMap(null);
+                if (currentPosition.numberOverlay) {
+                    currentPosition.numberOverlay.setMap(null);
+                }
+            }
+
+            // 새로운 위치 표시 생성
+            currentPosition = createLocationCircle(currentPos, isRescuer);
+            currentPosition.outerCircle.setMap(map);
+            currentPosition.innerCircle.setMap(map);
+            if (currentPosition.numberOverlay) {
+                currentPosition.numberOverlay.setMap(map);
             }
             
             socket.emit('locationUpdate', {
@@ -811,52 +806,91 @@
             });
         }
 
-        // 다른 사용자의 위치 업데이트 처리 함수 수정
-        socket.on('userLocation', (data) => {
-            if (!data || !data.role) return; // 데이터나 역할 정보가 없으면 무시
+        // 위치 표시용 원 스타일 설정
+        function createLocationCircle(position, isRescuer) {
+            // 바깥쪽 큰 원
+            const outerCircle = new kakao.maps.Circle({
+                center: position,
+                radius: 10, // 미터 단위
+                strokeWeight: 2,
+                strokeColor: isRescuer ? '#FF3B30' : '#0066ff',
+                strokeOpacity: 1,
+                strokeStyle: 'solid',
+                fillColor: isRescuer ? '#FF3B30' : '#0066ff',
+                fillOpacity: 0.3
+            });
 
-            const pos = new kakao.maps.LatLng(data.latitude, data.longitude);
-            
-            if (!otherMarkers[data.id]) {
-                // 새로운 마커 성
-                const isRescuer = data.role && data.role.includes('rescuer');
-                const markerImage = new kakao.maps.MarkerImage(
-                    isRescuer ? 
-                    // 구조대용 마커
-                    `data:image/svg+xml;charset=utf-8,<svg width="29" height="42" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M14.5 0C6.5 0 0 6.5 0 14.5C0 25.4 14.5 42 14.5 42C14.5 42 29 25.4 29 14.5C29 6.5 22.5 0 14.5 0Z" fill="%23FF3B30"/>
-                        <path d="M14.5 7L17 12H12L14.5 7Z" fill="white"/>
-                        <path d="M14.5 22L12 17H17L14.5 22Z" fill="white"/>
-                        <path d="M7 14.5L12 12V17L7 14.5Z" fill="white"/>
-                        <path d="M22 14.5L17 17V12L22 14.5Z" fill="white"/>
-                    </svg>` :
-                    // 요구조자용 기본 마커
-                    'https://t1.daumcdn.net/mapjsapi/images/2x/marker.png',
-                    new kakao.maps.Size(29, 42),
-                    { offset: new kakao.maps.Point(14, 42) }
-                );
+            // 안쪽 작은 원
+            const innerCircle = new kakao.maps.Circle({
+                center: position,
+                radius: 4,
+                strokeWeight: 0,
+                fillColor: isRescuer ? '#FF3B30' : '#0066ff',
+                fillOpacity: 1
+            });
 
-                otherMarkers[data.id] = new kakao.maps.Marker({
-                    position: pos,
-                    map: map,
-                    image: markerImage
+            // 구조대인 경우 번호 표시
+            if (isRescuer) {
+                const content = `<div style="
+                    position: absolute;
+                    background: #FF3B30;
+                    color: white;
+                    padding: 2px 6px;
+                    border-radius: 10px;
+                    font-size: 12px;
+                    font-weight: bold;
+                    transform: translate(-50%, -50%);
+                    white-space: nowrap;
+                ">${rescuerNumber}</div>`;
+
+                const numberOverlay = new kakao.maps.CustomOverlay({
+                    position: position,
+                    content: content,
+                    yAnchor: 0.5
                 });
+
+                return { outerCircle, innerCircle, numberOverlay };
+            }
+
+            return { outerCircle, innerCircle };
+        }
+
+        // 다른 사용자의 위치 업데이트 처리도 수정
+        socket.on('userLocation', (data) => {
+            const pos = new kakao.maps.LatLng(data.latitude, data.longitude);
+            const isRescuer = data.role && data.role.includes('rescuer');
+            
+            if (!otherPositions[data.id]) {
+                otherPositions[data.id] = createLocationCircle(pos, isRescuer);
+                otherPositions[data.id].outerCircle.setMap(map);
+                otherPositions[data.id].innerCircle.setMap(map);
+                if (otherPositions[data.id].numberOverlay) {
+                    otherPositions[data.id].numberOverlay.setMap(map);
+                }
             } else {
-                // 기존 마커 위치 업데이트
-                otherMarkers[data.id].setPosition(pos);
+                const newCenter = new kakao.maps.LatLng(data.latitude, data.longitude);
+                otherPositions[data.id].outerCircle.setPosition(newCenter);
+                otherPositions[data.id].innerCircle.setPosition(newCenter);
+                if (otherPositions[data.id].numberOverlay) {
+                    otherPositions[data.id].numberOverlay.setPosition(newCenter);
+                }
             }
         });
 
-        // 사용자 연결 해제 처리
+        // 연결 해제 시 위치 표시 제거
         socket.on('userDisconnected', (userId) => {
-            if (otherMarkers[userId]) {
-                otherMarkers[userId].setMap(null);
-                delete otherMarkers[userId];
+            if (otherPositions[userId]) {
+                otherPositions[userId].outerCircle.setMap(null);
+                otherPositions[userId].innerCircle.setMap(null);
+                if (otherPositions[userId].numberOverlay) {
+                    otherPositions[userId].numberOverlay.setMap(null);
+                }
+                delete otherPositions[userId];
             }
         });
 
-        // 마커 저장을 위한 객체
-        const otherMarkers = {};
+        // 다른 사용자들의 위치 저장용 객체
+        const otherPositions = {};
 
         // 내 위치로 이동하는 함수
         function moveToMyLocation() {
