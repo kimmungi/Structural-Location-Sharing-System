@@ -350,15 +350,17 @@
             right: 10px;
             z-index: 1000;
             padding: 10px 20px;
-            background-color: white;
-            border: 1px solid #ddd;
+            background-color: #0066ff;
+            color: white;
+            border: none;
             border-radius: 5px;
             cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: background-color 0.3s;
         }
 
         #myLocationButton:hover {
-            background-color: #f8f8f8;
+            background-color: #0056d6;
         }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
@@ -471,14 +473,10 @@
         let map;
         let marker;
 
-        // 전역 변수 선언
-        let currentPosition = null;
-        let initialLocationSet = false;
-
         function initMap() {
             const mapContainer = document.getElementById('map');
             const mapOption = {
-                center: new kakao.maps.LatLng(37.566826, 126.978656), // 서울시청 좌표 초기화
+                center: new kakao.maps.LatLng(37.566826, 126.978656), // 서울시청 좌표�� 초기화
                 level: 3
             };
             
@@ -516,7 +514,7 @@
                     });
                 }, 
                 (error) => {
-                    console.error('위치 정보 오류:', error);
+                    console.error('위�� 적보 오류:', error);
                 }, 
                 {
                     enableHighAccuracy: true,
@@ -695,14 +693,14 @@
         currentMarker.setImage(markerImage);
     }
                 
-                // 서버에 역할 변경 ���림
+                // 서버에 역할 변경 알림
                 socket.emit('userRole', { role: userRole });
                 
                 alert(`구조대 ${rescuerNumber}번으로 전환되었습니다.`);
             }
         }
 
-        // 구조대 번호 수정 함수도 커 업데이트 추가
+        // 구조대 번호 수정 함수도 마커 업데이트 추가
         function editRescuerNumber() {
             const newNumber = prompt('구조대 번호를 입력하세요 (1-10):', rescuerNumber);
             if (newNumber && !isNaN(newNumber) && newNumber >= 1 && newNumber <= 10) {
@@ -775,184 +773,119 @@
             }
         }
 
-        // 위치 표시용 원 생성 함수
-        function createLocationCircle(position, isRescuer) {
-            // 바깥쪽 큰 원
-            const outerCircle = new kakao.maps.Circle({
-                center: position,
-                radius: 10,
-                strokeWeight: 2,
-                strokeColor: isRescuer ? '#FF3B30' : '#0066ff',
-                strokeOpacity: 1,
-                strokeStyle: 'solid',
-                fillColor: isRescuer ? '#FF3B30' : '#0066ff',
-                fillOpacity: 0.3
-            });
-
-            // 안쪽 작은 원
-            const innerCircle = new kakao.maps.Circle({
-                center: position,
-                radius: 4,
-                strokeWeight: 0,
-                fillColor: isRescuer ? '#FF3B30' : '#0066ff',
-                fillOpacity: 1
-            });
-
-            // 구조대인 경우 번호 표시
-            if (isRescuer) {
-                const content = `<div style="
-                    position: absolute;
-                    background: #FF3B30;
-                    color: white;
-                    padding: 2px 6px;
-                    border-radius: 10px;
-                    font-size: 12px;
-                    font-weight: bold;
-                    transform: translate(-50%, -50%);
-                    white-space: nowrap;
-                ">${rescuerNumber}</div>`;
-
-                const numberOverlay = new kakao.maps.CustomOverlay({
-                    position: position,
-                    content: content,
-                    yAnchor: 0.5
-                });
-
-                return { outerCircle, innerCircle, numberOverlay };
-            }
-
-            return { outerCircle, innerCircle };
-        }
-
-        // 위치 업데이트 함수
+        // 위치 업데이트 함수 수정
         function updateLocation(position) {
-            try {
-                const currentPos = new kakao.maps.LatLng(
-                    position.coords.latitude, 
-                    position.coords.longitude
-                );
-                
+            const currentPos = new kakao.maps.LatLng(
+                position.coords.latitude, 
+                position.coords.longitude
+            );
+            
+            if (!currentMarker) {
                 const isRescuer = userRole.includes('rescuer');
-
-                // 기존 위치 표시 제거
-                if (currentPosition) {
-                    currentPosition.outerCircle.setMap(null);
-                    currentPosition.innerCircle.setMap(null);
-                    if (currentPosition.numberOverlay) {
-                        currentPosition.numberOverlay.setMap(null);
-                    }
-                }
-
-                // 새로운 위치 표시 생성
-                currentPosition = createLocationCircle(currentPos, isRescuer);
-                currentPosition.outerCircle.setMap(map);
-                currentPosition.innerCircle.setMap(map);
-                if (currentPosition.numberOverlay) {
-                    currentPosition.numberOverlay.setMap(map);
-                }
-
-                // 최초 한 번만 지도 중심을 현재 위치로 설정
-                if (!initialLocationSet) {
-                    map.setCenter(currentPos);
-                    initialLocationSet = true;
-                }
+                const markerImage = new kakao.maps.MarkerImage(
+                    isRescuer ? 
+                    `data:image/svg+xml;charset=utf-8,<svg width="29" height="42" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M14.5 0C6.5 0 0 6.5 0 14.5C0 25.4 14.5 42 14.5 42C14.5 42 29 25.4 29 14.5C29 6.5 22.5 0 14.5 0Z" fill="%23FF3B30"/>
+                        <text x="14.5" y="21" text-anchor="middle" fill="white" font-size="10" font-family="Arial" dy=".3em">${rescuerNumber}</text>
+                    </svg>` :
+                    `data:image/svg+xml;charset=utf-8,<svg width="29" height="42" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M14.5 0C6.5 0 0 6.5 0 14.5C0 25.4 14.5 42 14.5 42C14.5 42 29 25.4 29 14.5C29 6.5 22.5 0 14.5 0Z" fill="%230066ff"/>
+                    </svg>`,
+                    new kakao.maps.Size(29, 42),
+                    { offset: new kakao.maps.Point(14, 42) }
+                );
                 
-                socket.emit('locationUpdate', {
-                    latitude: position.coords.latitude,
-                    longitude: position.coords.longitude,
-                    role: userRole
+                currentMarker = new kakao.maps.Marker({
+                    position: currentPos,
+                    image: markerImage
                 });
-
-            } catch (error) {
-                console.error('위치 업데이트 중 오류 발생:', error);
-            }
-        }
-
-        // 내 위치 버튼 클릭 함수
-        function moveToMyLocation() {
-            if (currentPosition) {
-                const currentPos = currentPosition.outerCircle.getPosition();
-                map.setCenter(currentPos);
-            }
-        }
-
-        // 위치 추적 옵션 설정
-        const geolocationOptions = {
-            enableHighAccuracy: true,  // 높은 정확도 사용
-            maximumAge: 0,            // 캐시된 위치정보를 사용하지 않음
-            timeout: 5000             // 타임아웃 시간을 5초로 설정
-        };
-
-        // 위치 추적 시작 함수 수정
-        function startLocationTracking() {
-            if ("geolocation" in navigator) {
-                // 최초 위치 확인
-                navigator.geolocation.getCurrentPosition(
-                    updateLocation,
-                    handleLocationError,
-                    geolocationOptions
-                );
-
-                // 실시간 위치 추적 시작
-                const watchId = navigator.geolocation.watchPosition(
-                    updateLocation,
-                    handleLocationError,
-                    geolocationOptions
-                );
-
-                // watchId 저장 (나중에 추적 중지할 때 사용)
-                window.locationWatchId = watchId;
+                currentMarker.setMap(map);
             } else {
-                alert("이 브라우저에서는 위치 정보를 사용할 수 없습니다.");
+                currentMarker.setPosition(currentPos);
             }
+            
+            socket.emit('locationUpdate', {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+                role: userRole
+            });
         }
 
-        // 위치 정보 에러 처리 함수
-        function handleLocationError(error) {
-            let errorMessage = "";
-            switch(error.code) {
-                case error.PERMISSION_DENIED:
-                    errorMessage = "위치 정보 접근 권한이 거부되었습니다.";
-                    break;
-                case error.POSITION_UNAVAILABLE:
-                    errorMessage = "위치 정보를 사용할 수 없습니다.";
-                    break;
-                case error.TIMEOUT:
-                    errorMessage = "위치 정보 요청 시간이 초과되었습니다.";
-                    // 타임아웃 발생 시 재시도
-                    setTimeout(() => {
-                        navigator.geolocation.getCurrentPosition(
-                            updateLocation,
-                            handleLocationError,
-                            geolocationOptions
-                        );
-                    }, 1000);
-                    break;
-                default:
-                    errorMessage = "알 수 없는 오류가 발생했습니다.";
-                    break;
+        // 다른 사용자의 위치 업데이트 처리 함수 수정
+        socket.on('userLocation', (data) => {
+            if (!data || !data.role) return; // 데이터나 역할 정보가 없으면 무시
+
+            const pos = new kakao.maps.LatLng(data.latitude, data.longitude);
+            
+            if (!otherMarkers[data.id]) {
+                // 새로운 마커 성
+                const isRescuer = data.role && data.role.includes('rescuer');
+                const markerImage = new kakao.maps.MarkerImage(
+                    isRescuer ? 
+                    // 구조대용 마커
+                    `data:image/svg+xml;charset=utf-8,<svg width="29" height="42" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M14.5 0C6.5 0 0 6.5 0 14.5C0 25.4 14.5 42 14.5 42C14.5 42 29 25.4 29 14.5C29 6.5 22.5 0 14.5 0Z" fill="%23FF3B30"/>
+                        <path d="M14.5 7L17 12H12L14.5 7Z" fill="white"/>
+                        <path d="M14.5 22L12 17H17L14.5 22Z" fill="white"/>
+                        <path d="M7 14.5L12 12V17L7 14.5Z" fill="white"/>
+                        <path d="M22 14.5L17 17V12L22 14.5Z" fill="white"/>
+                    </svg>` :
+                    // 요구조자용 기본 마커
+                    'https://t1.daumcdn.net/mapjsapi/images/2x/marker.png',
+                    new kakao.maps.Size(29, 42),
+                    { offset: new kakao.maps.Point(14, 42) }
+                );
+
+                otherMarkers[data.id] = new kakao.maps.Marker({
+                    position: pos,
+                    map: map,
+                    image: markerImage
+                });
+            } else {
+                // 기존 마커 위치 업데이트
+                otherMarkers[data.id].setPosition(pos);
             }
-            console.warn(`위�� 정보 오류: ${errorMessage}`);
-        }
+        });
 
-        // 위치 추적 중지 함수 (필요한 경우 사용)
-        function stopLocationTracking() {
-            if (window.locationWatchId) {
-                navigator.geolocation.clearWatch(window.locationWatchId);
-                window.locationWatchId = null;
+        // 사용자 연결 해제 처리
+        socket.on('userDisconnected', (userId) => {
+            if (otherMarkers[userId]) {
+                otherMarkers[userId].setMap(null);
+                delete otherMarkers[userId];
             }
-        }
+        });
 
-        // 페이지 로드 시 위치 추적 시작
-        window.onload = function() {
-            startLocationTracking();
-            // ... 기존 onload 코드 ...
-        };
+        // 마커 저장을 위한 객체
+        const otherMarkers = {};
 
-        // 페이지 언로드 시 위치 추적 중지
-        window.onunload = function() {
-            stopLocationTracking();
-        };
+        // 내 위치로 이동하는 함수
+        function moveToMyLocation() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition((position) => {
+            const currentPos = new kakao.maps.LatLng(
+                position.coords.latitude, 
+                position.coords.longitude
+            );
+            
+            // 지도 중심을 현재 위치로 이동
+            map.setCenter(currentPos);
+            
+            // 줌 레벨 조정 (선택사항)
+            map.setLevel(3);
+        }, 
+        (error) => {
+            console.error('위치 정보 오류:', error);
+            alert('현재 위치를 가져올 수 없습니다.');
+        }, 
+        {
+            enableHighAccuracy: true,
+            timeout: 5000,
+            maximumAge: 0
+        });
+    } else {
+        alert('위치 정보를 지원하지 않는 브라우저입니다.');
+    }
+}
     </script>
 </body>
 </html>
