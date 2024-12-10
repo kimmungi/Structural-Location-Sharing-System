@@ -346,21 +346,30 @@
 
         #myLocationButton {
             position: absolute;
-            top: 10px;
-            right: 10px;
+            bottom: 20px;  /* 하단에 위치 */
+            right: 20px;   /* 우측에 위치 */
             z-index: 1000;
-            padding: 10px 20px;
-            background-color: #0066ff;
-            color: white;
-            border: none;
+            padding: 12px 20px;
+            background-color: #fff;
+            color: #333;
+            border: 1px solid #ddd;
             border-radius: 5px;
             cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            transition: background-color 0.3s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
 
         #myLocationButton:hover {
-            background-color: #0056d6;
+            background-color: #f8f8f8;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        #myLocationButton i {  /* 아이콘 추가시 */
+            font-size: 16px;
         }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
@@ -394,7 +403,9 @@
         </div>
     </div>
 
-    <button id="myLocationButton" onclick="moveToMyLocation()">내 위치</button>
+    <button id="myLocationButton" onclick="moveToMyLocation()">
+        <i class="fas fa-crosshairs"></i> 내 위치
+    </button>
 
     <script src="https://cdn.socket.io/4.4.1/socket.io.min.js"></script>
     <script src="https://unpkg.com/peerjs@1.3.2/dist/peerjs.min.js"></script>
@@ -453,7 +464,7 @@
             console.log('PeerJS connection closed');
         });
 
-        // 연결 이벤�� 핸들러 추가
+        // 연결 이벤트 핸들러 추가
         socket.on('connect', () => {
             console.log('Socket connected');
         });
@@ -700,7 +711,7 @@
             }
         }
 
-        // 구조대 번호 수정 함수도 ��커 업데이트 추가
+        // 구조대 번호 수정 함수도 커 업데이트 추가
         function editRescuerNumber() {
             const newNumber = prompt('구조대 번호를 입력하세요 (1-10):', rescuerNumber);
             if (newNumber && !isNaN(newNumber) && newNumber >= 1 && newNumber <= 10) {
@@ -773,37 +784,58 @@
             }
         }
 
+        // 초기 위치 설정 여부를 추적하는 변수
+        let initialLocationSet = false;
+
         // 위치 업데이트 함수 수정
         function updateLocation(position) {
-            const currentPos = new kakao.maps.LatLng(
-                position.coords.latitude, 
-                position.coords.longitude
-            );
-            
-            const isRescuer = userRole.includes('rescuer');
+            try {
+                const currentPos = new kakao.maps.LatLng(
+                    position.coords.latitude, 
+                    position.coords.longitude
+                );
+                
+                const isRescuer = userRole.includes('rescuer');
 
-            // 기존 위치 표시 제거
-            if (currentPosition) {
-                currentPosition.outerCircle.setMap(null);
-                currentPosition.innerCircle.setMap(null);
-                if (currentPosition.numberOverlay) {
-                    currentPosition.numberOverlay.setMap(null);
+                // 기존 위치 표시 제거
+                if (currentPosition) {
+                    currentPosition.outerCircle.setMap(null);
+                    currentPosition.innerCircle.setMap(null);
+                    if (currentPosition.numberOverlay) {
+                        currentPosition.numberOverlay.setMap(null);
+                    }
                 }
-            }
 
-            // 새로운 위치 표시 생성
-            currentPosition = createLocationCircle(currentPos, isRescuer);
-            currentPosition.outerCircle.setMap(map);
-            currentPosition.innerCircle.setMap(map);
-            if (currentPosition.numberOverlay) {
-                currentPosition.numberOverlay.setMap(map);
+                // 새로운 위치 표시 생성
+                currentPosition = createLocationCircle(currentPos, isRescuer);
+                currentPosition.outerCircle.setMap(map);
+                currentPosition.innerCircle.setMap(map);
+                if (currentPosition.numberOverlay) {
+                    currentPosition.numberOverlay.setMap(map);
+                }
+
+                // 최초 한 번만 지도 중심을 현재 위치로 설정
+                if (!initialLocationSet) {
+                    map.setCenter(currentPos);
+                    initialLocationSet = true;
+                }
+                
+                socket.emit('locationUpdate', {
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude,
+                    role: userRole
+                });
+
+            } catch (error) {
+                console.error('위치 업데이트 중 오류 발생:', error);
+                setTimeout(() => {
+                    navigator.geolocation.getCurrentPosition(
+                        updateLocation,
+                        handleLocationError,
+                        geolocationOptions
+                    );
+                }, 3000);
             }
-            
-            socket.emit('locationUpdate', {
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude,
-                role: userRole
-            });
         }
 
         // 위치 표시용 원 스타일 설정
@@ -892,34 +924,94 @@
         // 다른 사용자들의 위치 저장용 객체
         const otherPositions = {};
 
-        // 내 위치로 이동하는 함수
+        // 내 위치 버튼 클릭 함수
         function moveToMyLocation() {
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition((position) => {
-            const currentPos = new kakao.maps.LatLng(
-                position.coords.latitude, 
-                position.coords.longitude
-            );
-            
-            // 지도 중심을 현재 위치로 이동
-            map.setCenter(currentPos);
-            
-            // 줌 레벨 조정 (선택사항)
-            map.setLevel(3);
-        }, 
-        (error) => {
-            console.error('위치 정보 오류:', error);
-            alert('현재 위치를 가져올 수 없습니다.');
-        }, 
-        {
-            enableHighAccuracy: true,
-            timeout: 5000,
-            maximumAge: 0
-        });
-    } else {
-        alert('위치 정보를 지원하지 않는 브라우저입니다.');
-    }
-}
+            if (currentPosition) {
+                const currentPos = currentPosition.outerCircle.getPosition();
+                map.setCenter(currentPos);
+                
+                // 선택적: 적절한 줌 레벨로 설정
+                map.setLevel(3);
+            }
+        }
+
+        // 위치 추적 옵션 설정
+        const geolocationOptions = {
+            enableHighAccuracy: true,  // 높은 정확도 사용
+            maximumAge: 0,            // 캐시된 위치정보를 사용하지 않음
+            timeout: 5000             // 타임아웃 시간을 5초로 설정
+        };
+
+        // 위치 추적 시작 함수 수정
+        function startLocationTracking() {
+            if ("geolocation" in navigator) {
+                // 최초 위치 확인
+                navigator.geolocation.getCurrentPosition(
+                    updateLocation,
+                    handleLocationError,
+                    geolocationOptions
+                );
+
+                // 실시간 위치 추적 시작
+                const watchId = navigator.geolocation.watchPosition(
+                    updateLocation,
+                    handleLocationError,
+                    geolocationOptions
+                );
+
+                // watchId 저장 (나중에 추적 중지할 때 사용)
+                window.locationWatchId = watchId;
+            } else {
+                alert("이 브라우저에서는 위치 정보를 사용할 수 없습니다.");
+            }
+        }
+
+        // 위치 정보 에러 처리 함수
+        function handleLocationError(error) {
+            let errorMessage = "";
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    errorMessage = "위치 정보 접근 권한이 거부되었습니다.";
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    errorMessage = "위치 정보를 사용할 수 없습니다.";
+                    break;
+                case error.TIMEOUT:
+                    errorMessage = "위치 정보 요청 시간이 초과되었습니다.";
+                    // 타임아웃 발생 시 재시도
+                    setTimeout(() => {
+                        navigator.geolocation.getCurrentPosition(
+                            updateLocation,
+                            handleLocationError,
+                            geolocationOptions
+                        );
+                    }, 1000);
+                    break;
+                default:
+                    errorMessage = "알 수 없는 오류가 발생했습니다.";
+                    break;
+            }
+            console.warn(`위치 정보 오류: ${errorMessage}`);
+        }
+
+        // 위치 추적 중지 함수 (필요한 경우 사용)
+        function stopLocationTracking() {
+            if (window.locationWatchId) {
+                navigator.geolocation.clearWatch(window.locationWatchId);
+                window.locationWatchId = null;
+            }
+        }
+
+        // 페이지 로드 시 위치 추적 시작
+        window.onload = function() {
+            startLocationTracking();
+            // ... 기존 onload 코드 ...
+        };
+
+        // 페이지 언로드 시 위치 추적 중지
+        window.onunload = function() {
+            stopLocationTracking();
+        };
     </script>
 </body>
 </html>
