@@ -482,3 +482,7 @@ window.addEventListener("load", () => {
     hasMapObject: typeof kakao !== "undefined" && kakao.hasOwnProperty("maps"),
   });
 });
+
+window.toggleChat = chatUI.toggle;
+window.closeChat = chatUI.close;
+window.sendMessage = chatUI.sendMessage;
