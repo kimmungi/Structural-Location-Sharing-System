@@ -2,47 +2,18 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>구조 위치공유 시스템</title>
-    <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <title>카카오 지도 테스트</title>
+    <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=0cf2a2f5a547fdb9fa41f6c2832644a8"></script>
 </head>
 <body>
-    <h1 id="headerTitle" onclick="toggleRescuerMode()">구조 위치공유 시스템</h1>
-
-    <div id="map"></div>
-
-    <div id="chatIcon" onclick="toggleChat()">
-        <i class="fas fa-comments"></i>
-    </div>
-
-    <div id="chatContainer">
-        <div class="chat-header">
-            <h2>채팅</h2>
-            <button class="close-chat" onclick="closeChat()">×</button>
-        </div>
-        <div id="chatMessages"></div>
-        <div class="chat-input-container">
-            <div class="chat-controls">
-                <label class="control-button" for="imageInput">
-                    <i class="fas fa-image"></i>
-                </label>
-                <input type="file" id="imageInput" accept="image/*" style="display: none">
-            </div>
-            <input type="text" id="chatInput" placeholder="메시지를 입력하세요">
-            <button class="send-button" onclick="sendMessage()">
-                <i class="fas fa-paper-plane"></i>
-            </button>
-        </div>
-    </div>
-
-    <button id="myLocationButton" onclick="moveToMyLocation()">내 위치</button>
-
-    <!-- 스크립트 로딩 순서 변경 -->
-    <script src="https://cdn.socket.io/4.4.1/socket.io.min.js"></script>
-    <script src="https://unpkg.com/peerjs@1.3.2/dist/peerjs.min.js"></script>
-    <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=0cf2a2f5a547fdb9fa41f6c2832644a8"></script>
-    <script src="script.js"></script>
-
+    <div id="map" style="width:100%;height:100vh;"></div>
+    <script>
+        var mapContainer = document.getElementById('map');
+        var mapOption = {
+            center: new kakao.maps.LatLng(37.566826, 126.978656),
+            level: 3
+        };
+        var map = new kakao.maps.Map(mapContainer, mapOption);
+    </script>
 </body>
 </html>
