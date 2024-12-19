@@ -71,14 +71,31 @@ function initMap() {
 function startLocationTracking() {
   console.log("[Location] Starting location tracking...");
   if (navigator.geolocation) {
-    navigator.geolocation.watchPosition(updateLocation, handleLocationError, {
-      enableHighAccuracy: true,
-      maximumAge: 0,
-      timeout: 5000,
-    });
-    console.log("[Location] Geolocation watch started");
+    // 초기 위치 한 번 가져오기
+    navigator.geolocation.getCurrentPosition(
+      updateLocation,
+      handleLocationError,
+      { enableHighAccuracy: true }
+    );
+
+    // 주기적으로 위치 업데이트
+    const watchId = navigator.geolocation.watchPosition(
+      updateLocation,
+      handleLocationError,
+      {
+        enableHighAccuracy: true,
+        maximumAge: 1000, // 1초 이내의 캐시된 위치만 사용
+        timeout: 5000, // 5초 이내에 응답이 없으면 에러
+      }
+    );
+
+    // watchPosition ID 저장
+    window.locationWatchId = watchId;
+
+    console.log("[Location] Geolocation watch started with ID:", watchId);
   } else {
     console.error("[Location] Geolocation not supported by browser");
+    alert("브라우저가 위치 추적을 지원하지 않습니다.");
   }
 }
 
@@ -119,7 +136,17 @@ function updateLocation(position) {
   console.log("[Location] Received new position:", {
     lat: position.coords.latitude,
     lng: position.coords.longitude,
+    accuracy: position.coords.accuracy,
   });
+
+  // 정확도가 너무 낮은 경우 무시
+  if (position.coords.accuracy > 100) {
+    console.warn(
+      "[Location] Position accuracy too low:",
+      position.coords.accuracy
+    );
+    return;
+  }
 
   const currentPos = new kakao.maps.LatLng(
     position.coords.latitude,
@@ -139,10 +166,13 @@ function updateLocation(position) {
     currentMarker.setPosition(currentPos);
   }
 
+  // 위치 정보와 함께 타임스탭 전송
   socket.emit("locationUpdate", {
     latitude: position.coords.latitude,
     longitude: position.coords.longitude,
     role: userRole,
+    timestamp: Date.now(),
+    accuracy: position.coords.accuracy,
   });
 }
 
@@ -284,6 +314,12 @@ socket.on("userLocation", (data) => {
   console.log("[Socket] Received user location:", data);
   if (!data?.role) return;
 
+  // 오래된 위치 데이터 무시 (30초 이상)
+  if (Date.now() - data.timestamp > 30000) {
+    console.warn("[Location] Received outdated location data");
+    return;
+  }
+
   const pos = new kakao.maps.LatLng(data.latitude, data.longitude);
 
   if (!otherMarkers[data.id]) {
@@ -341,6 +377,17 @@ socket.on("userDisconnected", (userId) => {
   }
 });
 
+// Socket.IO 연결 재시도 로직 강화
+socket.io.on("reconnect_attempt", () => {
+  console.log("[Socket] Attempting to reconnect...");
+});
+
+socket.io.on("reconnect", () => {
+  console.log("[Socket] Reconnected successfully");
+  // 재연결 시 현재 위치 즉시 전송
+  navigator.geolocation.getCurrentPosition(updateLocation, handleLocationError);
+});
+
 // 내 위치로 이동
 function moveToMyLocation() {
   console.log("[Location] Moving to current location");
@@ -388,6 +435,14 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
   initMap();
+});
+
+// 페이지 종료 시 위치 추적 중지
+window.addEventListener("beforeunload", () => {
+  if (window.locationWatchId) {
+    navigator.geolocation.clearWatch(window.locationWatchId);
+    console.log("[Location] Cleared location watch");
+  }
 });
 
 // 로딩 스피너 UI
@@ -483,6 +538,7 @@ window.addEventListener("load", () => {
   });
 });
 
+// 전역 함수 설정
 window.toggleChat = chatUI.toggle;
 window.closeChat = chatUI.close;
 window.sendMessage = chatUI.sendMessage;
