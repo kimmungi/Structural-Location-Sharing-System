@@ -2,6 +2,7 @@ const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const cors = require("cors");
+const path = require("path"); // path 모듈 추가
 
 // Express 앱 및 HTTP 서버 생성
 const app = express();
@@ -9,7 +10,7 @@ const server = http.createServer(app);
 
 // CORS 및 기본 미들웨어 설정
 app.use(cors());
-app.use(express.static("public"));
+app.use(express.static(path.join(__dirname, "public"))); // 한 번만 설정
 
 // Socket.IO 서버 설정
 const io = new Server(server, {
