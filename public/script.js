@@ -19,41 +19,72 @@ const ROOM_ID = "default-room";
 
 // Socket.IO 이벤트 리스너
 socket.on("connect", () => {
-  console.log("Socket connected");
+  console.log("[Socket] Connected successfully");
   socket.emit("join-room", ROOM_ID, socket.id);
 });
 
 // 지도 초기화
 function initMap() {
+  console.log("[Map] Initializing map...");
+
   const mapContainer = document.getElementById("map");
-  const mapOption = {
-    center: new kakao.maps.LatLng(37.566826, 126.978656),
-    level: 3,
-  };
+  if (!mapContainer) {
+    console.error(
+      "[Map] Error: Map container not found! Check if element with id 'map' exists"
+    );
+    return;
+  }
 
-  map = new kakao.maps.Map(mapContainer, mapOption);
+  console.log("[Map] Container dimensions:", {
+    width: mapContainer.offsetWidth,
+    height: mapContainer.offsetHeight,
+  });
 
-  // 창 크기 변경 시 지도 크기 조정
-  window.addEventListener("resize", () => map.relayout());
+  try {
+    const mapOption = {
+      center: new kakao.maps.LatLng(37.566826, 126.978656),
+      level: 3,
+    };
 
-  // 위치 추적 시작
-  startLocationTracking();
+    if (typeof kakao === "undefined" || !kakao.maps) {
+      console.error("[Map] Error: Kakao maps SDK not loaded!");
+      return;
+    }
+
+    map = new kakao.maps.Map(mapContainer, mapOption);
+    console.log("[Map] Successfully created map instance");
+
+    // 창 크기 변경 시 지도 크기 조정
+    window.addEventListener("resize", () => {
+      console.log("[Map] Window resized, adjusting map layout");
+      map.relayout();
+    });
+
+    // 위치 추적 시작
+    startLocationTracking();
+  } catch (error) {
+    console.error("[Map] Error during map initialization:", error);
+  }
 }
 
 // 위치 추적 시작
 function startLocationTracking() {
+  console.log("[Location] Starting location tracking...");
   if (navigator.geolocation) {
     navigator.geolocation.watchPosition(updateLocation, handleLocationError, {
       enableHighAccuracy: true,
       maximumAge: 0,
       timeout: 5000,
     });
+    console.log("[Location] Geolocation watch started");
+  } else {
+    console.error("[Location] Geolocation not supported by browser");
   }
 }
 
 // 위치 에러 처리
 function handleLocationError(error) {
-  console.error("위치 정보 오류:", error);
+  console.error("[Location] Error getting location:", error);
   const errorMessages = {
     1: "위치 정보 접근 권한이 거부되었습니다.",
     2: "위치 정보를 사용할 수 없습니다.",
@@ -64,6 +95,7 @@ function handleLocationError(error) {
 
 // 마커 이미지 생성
 function createMarkerImage(isRescuer, number = "") {
+  console.log("[Marker] Creating marker image:", { isRescuer, number });
   const markerColor = isRescuer ? "#FF3B30" : "#0066ff";
   const svgContent = `
     <svg width="29" height="42" xmlns="http://www.w3.org/2000/svg">
@@ -84,12 +116,18 @@ function createMarkerImage(isRescuer, number = "") {
 
 // 위치 업데이트
 function updateLocation(position) {
+  console.log("[Location] Received new position:", {
+    lat: position.coords.latitude,
+    lng: position.coords.longitude,
+  });
+
   const currentPos = new kakao.maps.LatLng(
     position.coords.latitude,
     position.coords.longitude
   );
 
   if (!currentMarker) {
+    console.log("[Marker] Creating new marker");
     const isRescuer = userRole.includes("rescuer");
     currentMarker = new kakao.maps.Marker({
       position: currentPos,
@@ -97,6 +135,7 @@ function updateLocation(position) {
       map: map,
     });
   } else {
+    console.log("[Marker] Updating marker position");
     currentMarker.setPosition(currentPos);
   }
 
@@ -109,6 +148,7 @@ function updateLocation(position) {
 
 // 구조대 모드 토글
 function toggleRescuerMode() {
+  console.log("[Role] Toggling rescuer mode");
   if (userRole === "victim") {
     rescuerNumber++;
     userRole = `rescuer-${rescuerNumber}`;
@@ -124,12 +164,14 @@ function toggleRescuerMode() {
     }
 
     socket.emit("userRole", { role: userRole });
+    console.log("[Role] Changed to rescuer mode:", rescuerNumber);
     alert(`구조대 ${rescuerNumber}번으로 전환되었습니다.`);
   }
 }
 
 // 구조대 번호 수정
 function editRescuerNumber() {
+  console.log("[Role] Editing rescuer number");
   const newNumber = prompt("구조대 번호를 입력하세요 (1-10):", rescuerNumber);
   if (newNumber && !isNaN(newNumber) && newNumber >= 1 && newNumber <= 10) {
     rescuerNumber = parseInt(newNumber);
@@ -144,12 +186,14 @@ function editRescuerNumber() {
     }
 
     socket.emit("userRole", { role: userRole });
+    console.log("[Role] Updated rescuer number:", rescuerNumber);
   }
 }
 
 // 채팅 UI 관련 함수들
 const chatUI = {
   toggle() {
+    console.log("[Chat] Toggling chat UI");
     const chatIcon = document.getElementById("chatIcon");
     const chatContainer = document.getElementById("chatContainer");
     const isHidden =
@@ -161,6 +205,7 @@ const chatUI = {
   },
 
   close() {
+    console.log("[Chat] Closing chat UI");
     document.getElementById("chatContainer").style.display = "none";
     document.getElementById("chatIcon").style.display = "flex";
   },
@@ -170,6 +215,7 @@ const chatUI = {
     const message = chatInput.value.trim();
 
     if (message) {
+      console.log("[Chat] Sending message:", message);
       socket.emit("chatMessage", {
         text: message,
         role: userRole,
@@ -185,14 +231,17 @@ const chatUI = {
 
 // 이미지 처리
 function handleImageUpload(file) {
+  console.log("[Image] Processing image upload");
   if (!file) return;
 
   if (file.size > 5 * 1024 * 1024) {
+    console.error("[Image] File size exceeds 5MB limit");
     alert("파일 크기는 5MB를 초과할 수 없습니다.");
     return;
   }
 
   if (!file.type.startsWith("image/")) {
+    console.error("[Image] Invalid file type:", file.type);
     alert("이미지 파일만 전송할 수 있습니다.");
     return;
   }
@@ -219,6 +268,7 @@ function handleImageUpload(file) {
         data: compressedImage,
       });
       displayImageMessage(compressedImage);
+      console.log("[Image] Image processed and sent");
     };
     img.src = e.target.result;
   };
@@ -229,26 +279,15 @@ document.getElementById("imageInput").addEventListener("change", (e) => {
   handleImageUpload(e.target.files[0]);
 });
 
-// 메시지 표시 함수들
-function displayImageMessage(imageData) {
-  const messageElement = document.createElement("div");
-  const imageElement = document.createElement("img");
-  imageElement.src = imageData;
-  imageElement.className = "message-image";
-  messageElement.appendChild(imageElement);
-
-  const chatMessages = document.getElementById("chatMessages");
-  chatMessages.appendChild(messageElement);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
-}
-
 // Socket.IO 이벤트 핸들러
 socket.on("userLocation", (data) => {
+  console.log("[Socket] Received user location:", data);
   if (!data?.role) return;
 
   const pos = new kakao.maps.LatLng(data.latitude, data.longitude);
 
   if (!otherMarkers[data.id]) {
+    console.log("[Marker] Creating new marker for user:", data.id);
     const isRescuer = data.role.includes("rescuer");
     otherMarkers[data.id] = new kakao.maps.Marker({
       position: pos,
@@ -259,11 +298,13 @@ socket.on("userLocation", (data) => {
       ),
     });
   } else {
+    console.log("[Marker] Updating marker position for user:", data.id);
     otherMarkers[data.id].setPosition(pos);
   }
 });
 
 socket.on("chatMessage", (message) => {
+  console.log("[Chat] Received message:", message);
   const chatMessages = document.getElementById("chatMessages");
   const messageElement = document.createElement("div");
 
@@ -293,6 +334,7 @@ socket.on("chatMessage", (message) => {
 });
 
 socket.on("userDisconnected", (userId) => {
+  console.log("[Socket] User disconnected:", userId);
   if (otherMarkers[userId]) {
     otherMarkers[userId].setMap(null);
     delete otherMarkers[userId];
@@ -301,11 +343,16 @@ socket.on("userDisconnected", (userId) => {
 
 // 내 위치로 이동
 function moveToMyLocation() {
+  console.log("[Location] Moving to current location");
   showLoadingSpinner();
 
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        console.log("[Location] Got current position:", {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        });
         const currentPos = new kakao.maps.LatLng(
           position.coords.latitude,
           position.coords.longitude
@@ -315,7 +362,7 @@ function moveToMyLocation() {
         hideLoadingSpinner();
       },
       (error) => {
-        console.error("위치 정보 오류:", error);
+        console.error("[Location] Error getting current position:", error);
         hideLoadingSpinner();
         handleLocationError(error);
       },
@@ -326,14 +373,27 @@ function moveToMyLocation() {
       }
     );
   } else {
+    console.error("[Location] Geolocation not supported");
     alert("위치 정보를 지원하지 않는 브라우저입니다.");
     hideLoadingSpinner();
   }
 }
 
+// DOM이 로드된 후 초기화
+document.addEventListener("DOMContentLoaded", () => {
+  console.log("[Init] DOM Content Loaded");
+  if (typeof kakao === "undefined") {
+    console.error("[Init] Error: Kakao maps SDK not loaded!");
+    alert("카카오맵 SDK가 로드되지 않았습니다. 페이지를 새로고침 해주세요.");
+    return;
+  }
+  initMap();
+});
+
 // 로딩 스피너 UI
 const spinner = {
   show() {
+    console.log("[UI] Showing loading spinner");
     const existingSpinner = document.getElementById("location-spinner");
     if (existingSpinner) existingSpinner.remove();
 
@@ -383,13 +443,42 @@ const spinner = {
       `;
       document.head.appendChild(styleSheet);
     }
+
+    console.log("[UI] Loading spinner created and shown");
   },
 
   hide() {
+    console.log("[UI] Hiding loading spinner");
     const spinner = document.getElementById("location-spinner");
-    if (spinner) spinner.remove();
+    if (spinner) {
+      spinner.remove();
+      console.log("[UI] Loading spinner removed");
+    } else {
+      console.log("[UI] No spinner found to hide");
+    }
   },
 };
 
 const showLoadingSpinner = spinner.show;
 const hideLoadingSpinner = spinner.hide;
+
+// 디버깅을 위한 전역 에러 핸들러
+window.onerror = function (msg, url, lineNo, columnNo, error) {
+  console.error("[Global Error]", {
+    message: msg,
+    url: url,
+    line: lineNo,
+    column: columnNo,
+    error: error,
+  });
+  return false;
+};
+
+// 카카오맵 로드 상태 체크
+window.addEventListener("load", () => {
+  console.log("[Init] Window loaded");
+  console.log("[Kakao] SDK Status:", {
+    isDefined: typeof kakao !== "undefined",
+    hasMapObject: typeof kakao !== "undefined" && kakao.hasOwnProperty("maps"),
+  });
+});
