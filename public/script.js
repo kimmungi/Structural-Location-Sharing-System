@@ -1,7 +1,7 @@
-// Socket.IO 연결
+// Socket.IO 연결 부분을 수정
 const socket = io("https://structural-location-sharing-system.onrender.com", {
-  transports: ["polling", "websocket"],
-  upgrade: false,
+  transports: ["websocket", "polling"], // websocket을 먼저 시도
+  upgrade: true, // 업그레이드 허용
   forceNew: true,
   reconnection: true,
   reconnectionDelay: 1000,
@@ -17,10 +17,18 @@ let currentMarker = null;
 const otherMarkers = {};
 const ROOM_ID = "default-room";
 
-// Socket.IO 이벤트 리스너
+// Socket.IO 이벤트 리스너 강화
 socket.on("connect", () => {
-  console.log("[Socket] Connected successfully");
+  console.log("[Socket] Connected successfully with ID:", socket.id);
   socket.emit("join-room", ROOM_ID, socket.id);
+
+  // 연결 직후 현재 위치 전송
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition((position) => {
+      updateLocation(position);
+      console.log("[Socket] Initial location sent after connection");
+    }, handleLocationError);
+  }
 });
 
 // 지도 초기화
