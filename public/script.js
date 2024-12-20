@@ -332,12 +332,19 @@ document.getElementById("imageInput").addEventListener("change", (e) => {
   handleImageUpload(e.target.files[0]);
 });
 
+// Socket.IO 이벤트 핸들러
 socket.on("userLocation", (data) => {
   console.log("[Socket] Received user location:", data);
+  if (!data?.role) return;
+
+  // 오래된 위치 데이터 무시 (30초 이상)
+  if (Date.now() - data.timestamp > 30000) {
+    console.warn("[Location] Received outdated location data");
+    return;
+  }
 
   const pos = new kakao.maps.LatLng(data.latitude, data.longitude);
 
-  // 기존 마커 갱신 또는 생성
   if (!otherMarkers[data.id]) {
     console.log("[Marker] Creating new marker for user:", data.id);
     const isRescuer = data.role.includes("rescuer");
@@ -353,15 +360,6 @@ socket.on("userLocation", (data) => {
     console.log("[Marker] Updating marker position for user:", data.id);
     otherMarkers[data.id].setPosition(pos);
   }
-
-  // 오래된 마커 제거 (30초 동안 업데이트가 없으면 제거)
-  setTimeout(() => {
-    if (Date.now() - data.timestamp > 30000) {
-      otherMarkers[data.id]?.setMap(null);
-      delete otherMarkers[data.id];
-      console.log("[Marker] Removed outdated marker for user:", data.id);
-    }
-  }, 30000);
 });
 
 socket.on("chatMessage", (message) => {
