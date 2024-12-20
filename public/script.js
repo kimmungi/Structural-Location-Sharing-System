@@ -147,13 +147,28 @@ function updateLocation(position) {
     accuracy: position.coords.accuracy,
   });
 
-  // 정확도가 너무 낮은 경우 무시
-  if (position.coords.accuracy > 100) {
-    console.warn(
-      "[Location] Position accuracy too low:",
-      position.coords.accuracy
-    );
-    return;
+  if (position.coords.accuracy > 1000) {
+    alert("위치 데이터가 정확하지 않을 수 있습니다. 신호를 확인하세요.");
+  }
+
+  // 정확도가 낮아도 위치를 업데이트
+  updateMapWithAccuracy(
+    position.coords.latitude,
+    position.coords.longitude,
+    position.coords.accuracy
+  );
+
+  function updateMapWithAccuracy(lat, lng, accuracy) {
+    const circle = new kakao.maps.Circle({
+      center: new kakao.maps.LatLng(lat, lng),
+      radius: accuracy, // 오차 범위를 반영
+      strokeWeight: 1,
+      strokeColor: "#FF0000",
+      strokeOpacity: 0.8,
+      fillColor: "#FF0000",
+      fillOpacity: 0.2,
+    });
+    circle.setMap(map);
   }
 
   const currentPos = new kakao.maps.LatLng(
@@ -317,19 +332,12 @@ document.getElementById("imageInput").addEventListener("change", (e) => {
   handleImageUpload(e.target.files[0]);
 });
 
-// Socket.IO 이벤트 핸들러
 socket.on("userLocation", (data) => {
   console.log("[Socket] Received user location:", data);
-  if (!data?.role) return;
-
-  // 오래된 위치 데이터 무시 (30초 이상)
-  if (Date.now() - data.timestamp > 30000) {
-    console.warn("[Location] Received outdated location data");
-    return;
-  }
 
   const pos = new kakao.maps.LatLng(data.latitude, data.longitude);
 
+  // 기존 마커 갱신 또는 생성
   if (!otherMarkers[data.id]) {
     console.log("[Marker] Creating new marker for user:", data.id);
     const isRescuer = data.role.includes("rescuer");
@@ -345,6 +353,15 @@ socket.on("userLocation", (data) => {
     console.log("[Marker] Updating marker position for user:", data.id);
     otherMarkers[data.id].setPosition(pos);
   }
+
+  // 오래된 마커 제거 (30초 동안 업데이트가 없으면 제거)
+  setTimeout(() => {
+    if (Date.now() - data.timestamp > 30000) {
+      otherMarkers[data.id]?.setMap(null);
+      delete otherMarkers[data.id];
+      console.log("[Marker] Removed outdated marker for user:", data.id);
+    }
+  }, 30000);
 });
 
 socket.on("chatMessage", (message) => {
